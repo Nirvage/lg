@@ -17,6 +17,8 @@ Elle fonctionne sur téléphone, sans serveur ni installation : ouvrez simplemen
 - **Outils du MJ** : retour arrière, mort manuelle (Petite Fille surprise…), retour d'un joueur,
   notes / cartes Événement dans le journal. La partie est sauvegardée dans le navigateur.
 - **Page Cartes** (`cartes.html`) : toutes les cartes et leurs effets, avec recherche et filtres.
+- **Images des cartes** : déposez vos propres images dans `img/cartes/` (voir
+  [la liste des noms de fichier](img/cartes/README.md)) ; sinon une icône est affichée.
 
 ## Tests
 

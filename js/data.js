@@ -280,3 +280,22 @@ const METIER_BY_ID = Object.fromEntries(METIERS.map((m) => [m.id, m]));
 
 // Rôles qu'on peut mettre dans une composition (pas les statuts comme Capitaine).
 const ROLES_JOUABLES = ROLES.filter((r) => !r.statut);
+
+// Visuel d'une carte : l'image déposée dans img/cartes/<id>.png si elle
+// existe (par exemple un scan de vos cartes officielles), sinon l'icône.
+const IMAGES_ABSENTES = new Set();
+function visuelCarte(id, classe) {
+  const r = ROLE_BY_ID[id];
+  const icone = r ? r.icone : "?";
+  if (IMAGES_ABSENTES.has(id)) return `<span class="visuel sans-image ${classe || ""}"><span class="repli">${icone}</span></span>`;
+  return `<span class="visuel ${classe || ""}"><img src="img/cartes/${id}.png" alt="" data-carte="${id}"><span class="repli">${icone}</span></span>`;
+}
+if (typeof document !== "undefined") {
+  document.addEventListener("error", (e) => {
+    const img = e.target;
+    if (img && img.tagName === "IMG" && img.dataset.carte) {
+      IMAGES_ABSENTES.add(img.dataset.carte);
+      img.parentNode.classList.add("sans-image");
+    }
+  }, true);
+}

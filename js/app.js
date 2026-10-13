@@ -228,7 +228,7 @@
           <summary>${esc(EXTENSIONS[ext].nom)} ${nb ? `<span class="muted">(${nb})</span>` : ""}</summary>
           ${roles.map((r) => `
             <div class="compo-role">
-              <span class="ico">${r.icone}</span>
+              ${visuelCarte(r.id, "ico")}
               <span class="nom">${esc(r.nom)} <span class="pastille camp-${r.camp}">${esc(CAMPS[r.camp].nom)}</span><small>${esc(r.resume)}</small></span>
               ${compteur(r.id, config.compo[r.id] || 0, "role")}
             </div>`).join("")}
@@ -313,7 +313,7 @@
 
   function libelleJoueur(p) {
     const r = ROLE_BY_ID[p.role];
-    return r ? r.icone + " " + r.nom : p.role;
+    return r ? r.nom : p.role;
   }
 
   function renderPartie() {
@@ -333,7 +333,8 @@
         const cands = S.players.filter((p) => inp.candidats.includes(p.id));
         saisie = `<div class="choix-joueurs">${cands.map((p) => `
           <button data-a="sel" data-id="${p.id}" class="${selection.includes(p.id) ? "sel" : ""}">
-            <span>${esc(p.nom)} ${badges(p, S)}</span><span class="r">${esc(libelleJoueur(p))}</span>
+            ${visuelCarte(p.role, "mini")}
+            <span class="txt"><span>${esc(p.nom)} ${badges(p, S)}</span><span class="r">${esc(libelleJoueur(p))}</span></span>
           </button>`).join("")}</div>`;
         if (inp.extra) saisie += `<div class="choix-options">${inp.extra.map((o) => `<button data-a="opt" data-v="${esc(o.v)}">${esc(o.label)}</button>`).join("")}</div>`;
         peutValider = selection.length >= inp.min && selection.length <= inp.max;
@@ -377,7 +378,7 @@
         <div class="joueurs-partie" style="margin-top:8px">
           ${S.players.map((p) => `
             <div class="jp ${p.alive ? "" : "mort"}">
-              <span class="ico">${ROLE_BY_ID[p.role] ? ROLE_BY_ID[p.role].icone : "?"}</span>
+              ${visuelCarte(p.role, "ico")}
               <span class="n">${esc(p.nom)}</span>
               <span class="r">${esc(ROLE_BY_ID[p.role] ? ROLE_BY_ID[p.role].nom : p.role)}${p.metier ? " · " + esc(METIER_BY_ID[p.metier].nom) : ""}${p.alive ? "" : " — " + esc(p.mort.quand)}</span>
               <span class="badges">${badges(p, S)}</span>
@@ -435,7 +436,7 @@
         <p class="muted">Passez le téléphone à</p>
         <p class="nomrole">${esc(config.joueurs[i])}</p>
         ${visible ? `
-          <div class="grosse">${r.icone}</div>
+          <div class="grosse">${visuelCarte(r.id, "revele")}</div>
           <p class="nomrole">${esc(r.nom)}</p>
           ${m ? `<p>Bâtiment : ${m.icone} ${esc(m.nom)}</p>` : ""}
           <p class="muted">${esc(r.effet)}</p>
@@ -498,6 +499,7 @@
     sauverPartie();
     vue = "partie";
     render();
+    window.scrollTo(0, 0);
   }
 
   // ---------- Événements ----------
