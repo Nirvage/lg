@@ -34,6 +34,9 @@
   let vue = "joueurs";
   let selection = [];
   let cleEtape = null;
+  // Sections repliables de l'écran de partie restant ouvertes entre deux rendus.
+  const ouverts = { joueurs: true, outils: false, journal: false };
+  const ouvert = (k) => (ouverts[k] ? "open" : "");
 
   const partieSauvee = lire(CLE_PARTIE);
   if (partieSauvee && partieSauvee.players && partieSauvee.phase !== "fin") {
@@ -369,7 +372,7 @@
         <span class="muted grow">${vivants} vivant${vivants > 1 ? "s" : ""} / ${S.players.length}</span>
       </div>
       ${corps}
-      <details class="panel section" open>
+      <details class="panel section" data-k="joueurs" ${ouvert("joueurs")}>
         <summary>Joueurs</summary>
         <div class="joueurs-partie" style="margin-top:8px">
           ${S.players.map((p) => `
@@ -382,7 +385,7 @@
         </div>
         <p class="muted small">👑 Capitaine · ❤️ Amoureux · 🎶 Charmé · 🛡️ Protégé · 🐺 Devenu loup · 🐦‍⬛ Accusé par le Corbeau</p>
       </details>
-      <details class="panel section">
+      <details class="panel section" data-k="outils" ${ouvert("outils")}>
         <summary>Outils du meneur</summary>
         <div class="row" style="margin-top:8px">
           <button data-a="mort-manuelle">☠️ Mort manuelle</button>
@@ -391,7 +394,7 @@
           <button class="danger" data-a="abandon">Arrêter la partie</button>
         </div>
       </details>
-      <details class="panel section">
+      <details class="panel section" data-k="journal" ${ouvert("journal")}>
         <summary>Journal</summary>
         <div class="journal" style="margin-top:8px">
           ${S.log.slice().reverse().map((l) => `<div class="${l.secret ? "secret" : ""}"><span class="p">${esc(l.p)}</span>${l.secret ? "🤫 " : ""}${esc(l.txt)}</div>`).join("")}
@@ -453,6 +456,34 @@
     dessiner();
   }
 
+  // Petite boîte de dialogue intégrée à la page (remplace confirm/prompt).
+  function dialogue(question, opts, siOk) {
+    const fond = document.createElement("div");
+    fond.className = "modal-fond";
+    fond.innerHTML = `<div class="modal">
+      <p><strong>${esc(question)}</strong></p>
+      ${opts.saisie ? `<input type="text" id="dialogue-saisie" placeholder="Ex. : carte Événement « Nuit sans lune »">` : ""}
+      <div class="actions">
+        <button data-d="annuler">Annuler</button>
+        <button class="${opts.danger ? "danger" : "primary"}" data-d="ok">${esc(opts.ok || "OK")}</button>
+      </div>
+    </div>`;
+    document.body.appendChild(fond);
+    const champ = fond.querySelector("#dialogue-saisie");
+    if (champ) champ.focus();
+    const fermer = (ok) => {
+      const v = champ ? champ.value.trim() : true;
+      fond.remove();
+      if (ok) siOk(v);
+    };
+    fond.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-d]");
+      if (b) fermer(b.dataset.d === "ok");
+      else if (e.target === fond) fermer(false);
+    });
+    if (champ) champ.addEventListener("keydown", (e) => { if (e.key === "Enter") fermer(true); });
+  }
+
   function demarrer() {
     const setup = {
       capitaine: config.capitaine,
@@ -470,6 +501,10 @@
   }
 
   // ---------- Événements ----------
+
+  app.addEventListener("toggle", (e) => {
+    if (e.target.dataset && e.target.dataset.k) ouverts[e.target.dataset.k] = e.target.open;
+  }, true);
 
   app.addEventListener("input", (e) => {
     const t = e.target;
@@ -588,16 +623,21 @@
         sauverPartie();
         window.scrollTo({ top: 0, behavior: "smooth" });
         break;
-      case "note": {
-        const txt = prompt("Événement ou note à ajouter au journal :");
-        if (txt) { Engine.noter(txt); sauverPartie(); }
-        break;
-      }
+      case "note":
+        dialogue("Événement ou note à ajouter au journal", { saisie: true, ok: "Ajouter" }, (txt) => {
+          if (!txt) return;
+          Engine.noter(txt);
+          sauverPartie();
+          render();
+        });
+        return;
       case "abandon":
-        if (!confirm("Arrêter la partie en cours ? Elle sera effacée.")) return;
-        effacer(CLE_PARTIE);
-        vue = "distrib";
-        break;
+        dialogue("Arrêter la partie en cours ? Elle sera effacée.", { ok: "Arrêter la partie", danger: true }, () => {
+          effacer(CLE_PARTIE);
+          vue = "distrib";
+          render();
+        });
+        return;
       case "nouvelle":
         effacer(CLE_PARTIE);
         vue = "distrib";

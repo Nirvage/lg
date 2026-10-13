@@ -32,7 +32,7 @@ body {
 a { color: var(--accent); }
 
 header.top {
-  position: sticky; top: 0; z-index: 10;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
   display: flex; align-items: center; gap: 12px;
   padding: 10px 16px;
   background: rgba(18, 20, 31, 0.95);
