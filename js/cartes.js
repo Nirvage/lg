@@ -18,7 +18,7 @@
 
   function carte(r) {
     return `<article class="carte camp-${r.camp}">
-      <div class="tete">${visuelCarte(r.id, "grand")}<h3>${esc(r.nom)}</h3></div>
+      <div class="tete"><span class="ico">${r.icone}</span><h3>${esc(r.nom)}</h3></div>
       <div class="meta">
         <span class="pastille camp-${r.camp}">${esc(CAMPS[r.camp].nom)}</span>
         <span class="pastille ext">${esc(EXTENSIONS[r.ext].nom)}</span>

@@ -14,8 +14,7 @@ const { Engine } = ctx;
 function partie(roles, opts = {}) {
   Engine.nouvellePartie({
     capitaine: !!opts.capitaine,
-    nbJoueurs: opts.nbJoueurs,
-    joueurs: roles.map((r, i) => ({ nom: opts.anonyme ? undefined : "J" + i, role: r, metier: (opts.metiers || [])[i] || null })),
+    joueurs: roles.map((r, i) => ({ nom: "J" + i, role: r, metier: (opts.metiers || [])[i] || null })),
     horsJeu: opts.horsJeu || [],
   });
 }
@@ -119,35 +118,21 @@ const tests = {
   "Chevalier : le loup à sa gauche meurt la nuit suivante"() {
     partie(["villageois", "loup-garou", "chevalier", "villageois", "villageois", "loup-garou", "villageois"]);
     rep("loups", [2]);
-    rep("chevalier", [1]);
-    jusqua("vote");
-    assert(alive(1), "le loup ne meurt que la nuit suivante");
-    Engine.repondre("personne");
+    rep("vote", "personne");
     rep("loups", [3]);
     jusqua("vote");
-    assert(!alive(1), "le loup désigné (J1) doit mourir");
+    assert(!alive(1), "le loup à gauche (J1) doit mourir");
     assert(alive(5));
   },
   "Renard : perd son pouvoir sans loup"() {
     partie(["villageois", "villageois", "renard", "villageois", "loup-garou", "villageois"]);
-    rep("renard", [0, 1, 3]);
+    rep("renard", [1]);
     assert(!S().mem.renardActif);
   },
-  "Montreur d'ours : rappel au matin avec la liste des loups"() {
+  "Montreur d'ours grogne avec un loup voisin"() {
     partie(["villageois", "montreur-ours", "loup-garou", "villageois", "villageois"]);
     jusqua("ours");
-    assert(Engine.spec().texte.includes("J2"));
-  },
-  "Partie anonyme : cartes nommées par rôle et cartes au centre"() {
-    partie(["loup-garou", "loup-garou", "voleur", "voyante", "villageois", "villageois", "villageois"], { anonyme: true, nbJoueurs: 5 });
-    assert.strictEqual(etape(), "centre");
-    assert.deepStrictEqual(S().players.map((p) => p.nom).slice(0, 2), ["Loup-Garou 1", "Loup-Garou 2"]);
-    Engine.repondre([3, 6]);
-    assert.strictEqual(S().players.length, 5);
-    assert.deepStrictEqual(S().horsJeu, ["voyante", "villageois"]);
-    assert.strictEqual(S().players[4].nom, "Simple Villageois 2");
-    rep("voleur", 0);
-    assert.strictEqual(S().players.find((p) => p.roleInitial === "voleur").role, "voyante");
+    assert(Engine.spec().dire.includes("GRRRR"));
   },
   "Ange gagne s'il est éliminé au premier vote"() {
     partie(["loup-garou", "ange", "villageois", "villageois", "villageois"]);

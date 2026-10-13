@@ -28,8 +28,7 @@ function partie() {
   const metiers = Math.random() < 0.4 ? shuffle(METIERS.map((m) => m.id)) : [];
   const setup = {
     capitaine: Math.random() < 0.7,
-    nbJoueurs: Math.random() < 0.5 ? n - rnd(3) : undefined,
-    joueurs: Array.from({ length: n }, (_, i) => ({ nom: Math.random() < 0.5 ? undefined : "J" + i, role: cartes[i], metier: metiers.length ? metiers[i] || "vagabond" : null })),
+    joueurs: Array.from({ length: n }, (_, i) => ({ nom: "J" + i, role: cartes[i], metier: metiers.length ? metiers[i] || "vagabond" : null })),
     horsJeu: cartes.slice(n, n + 3),
   };
   let S = Engine.nouvellePartie(setup);
