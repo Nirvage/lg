@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#12141f">
+  <title>Loup-Garou — Les cartes</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐺</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>🐺 Meneur de jeu</h1>
+    <nav>
+      <a href="index.html">Partie</a>
+      <a href="cartes.html" class="actif">Cartes</a>
+    </nav>
+  </header>
+  <main>
+    <h2 style="margin-top:0">Les cartes et leurs effets</h2>
+    <input type="text" id="recherche" placeholder="Rechercher une carte…" aria-label="Rechercher une carte" style="margin-bottom:10px">
+    <div class="filtres" id="filtre-ext"></div>
+    <div class="filtres" id="filtre-camp"></div>
+    <p class="muted small" id="compte"></p>
+    <div class="cartes" id="cartes"></div>
+    <h2 id="titre-metiers">Le Village : bâtiments et métiers</h2>
+    <p class="muted small" id="intro-metiers">Avec l'extension Le Village, chaque joueur reçoit un bâtiment (métier) en plus de son rôle.</p>
+    <div class="cartes" id="metiers"></div>
+  </main>
+  <script src="js/data.js"></script>
+  <script src="js/cartes.js"></script>
+</body>
+</html>
