@@ -220,3 +220,16 @@ details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
   .modal-fond { align-items: center; }
   .modal { border-radius: var(--radius); }
 }
+
+/* Visuels des cartes (image officielle si fournie, sinon icône) */
+.visuel { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.visuel img { display: block; width: 100%; height: auto; border-radius: 6px; }
+.visuel .repli { display: none; }
+.visuel.sans-image img { display: none; }
+.visuel.sans-image .repli { display: inline; }
+.visuel.ico { width: 34px; font-size: 22px; }
+.visuel.mini { width: 40px; font-size: 24px; }
+.visuel.grand { width: 64px; font-size: 34px; }
+.choix-joueurs button { flex-direction: row; align-items: center; gap: 8px; }
+.choix-joueurs button .txt { display: flex; flex-direction: column; min-width: 0; }
+.compteur .val.gros { font-size: 22px; min-width: 40px; }

@@ -14,7 +14,8 @@ const Engine = (() => {
   function nouvellePartie(setup) {
     const players = setup.joueurs.map((j, i) => ({
       id: i,
-      nom: j.nom,
+      nom: j.nom || roleNom(j.role),
+      anonyme: !j.nom,
       role: j.role,
       roleInitial: j.role,
       metier: j.metier || null,
@@ -73,8 +74,13 @@ const Engine = (() => {
       history: [],
       winner: null,
     };
-    log("La partie commence avec " + players.length + " joueurs.");
+    renommer();
+    log("La partie commence avec " + (setup.nbJoueurs || players.length) + " joueurs.");
     S.queue = presents.has("ange") ? [{ t: "jour", ange: true }] : [{ t: "nuit" }];
+    // Plus de cartes que de joueurs (Voleur, Comédien) : le meneur indique
+    // d'abord quelles cartes sont restées au centre.
+    const surplus = setup.nbJoueurs ? players.length - setup.nbJoueurs : 0;
+    if (surplus > 0) S.queue.unshift({ t: "centre", n: surplus });
     advance();
     return S;
   }
@@ -159,6 +165,24 @@ const Engine = (() => {
     return { t: "info", titre, texte, ...opts };
   }
 
+  // Nomme les cartes d'après leur rôle : « Loup-Garou 1 », « Voyante »...
+  function renommer() {
+    const total = {};
+    S.players.forEach((p) => { if (p.anonyme) total[p.roleInitial] = (total[p.roleInitial] || 0) + 1; });
+    const k = {};
+    S.players.forEach((p) => {
+      if (!p.anonyme) return;
+      k[p.roleInitial] = (k[p.roleInitial] || 0) + 1;
+      p.nom = roleNom(p.roleInitial) + (total[p.roleInitial] > 1 ? " " + k[p.roleInitial] : "");
+    });
+  }
+
+  // « Voyante : Paul. » — omis quand la carte porte déjà le nom du rôle.
+  function qui(p, label) {
+    if (p.anonyme && p.role === p.roleInitial) return "";
+    return label + " : " + p.nom + ". ";
+  }
+
   // ---------- Mort et conséquences ----------
 
   const CAUSES = {
@@ -198,10 +222,8 @@ const Engine = (() => {
     }
 
     // Chevalier dévoré : le premier loup à sa gauche mourra la nuit suivante.
-    if (p.role === "chevalier" && cause === "loups" && pouvoirOK(p)) {
-      S.mem.chevalierNuit = S.nuit + 1;
-      S.mem.chevalierId = p.id;
-      log("Le Chevalier a contaminé un loup : il mourra la nuit prochaine.", true);
+    if (p.role === "chevalier" && cause === "loups" && pouvoirOK(p) && vivants().some(estLoup)) {
+      S.pending.push({ t: "chevalier" });
     }
 
     // Chasseur : tire immédiatement.
@@ -332,6 +354,36 @@ const Engine = (() => {
       },
     }),
 
+    centre: (s) => ({
+      titre: "Cartes restées au centre",
+      texte: "La composition compte " + s.n + " carte(s) de plus que de joueurs" + (enJeu("voleur") ? " (cartes du Voleur" + (enJeu("comedien") ? " et du Comédien)" : ")") : enJeu("comedien") ? " (cartes du Comédien)" : "") + ". Après la distribution, indiquez les cartes non distribuées.",
+      input: choixJoueurs(ids(S.players), s.n, s.n),
+      apply(a) {
+        a.forEach((id) => S.horsJeu.push(P(id).role));
+        S.players = S.players.filter((p) => !a.includes(p.id));
+        renommer();
+        log("Cartes au centre : " + S.horsJeu.map(roleNom).join(", ") + ".", true);
+      },
+    }),
+
+    chevalier: () => {
+      const loups = vivants().filter(estLoup);
+      if (loups.length === 0) return null;
+      return {
+        titre: "Le Chevalier à l'Épée Rouillée",
+        texte: "Le Chevalier a été dévoré : le premier Loup-Garou assis à sa gauche attrape le tétanos et mourra la nuit prochaine. Désignez ce loup (sans rien annoncer).",
+        secret: true,
+        input: choixJoueurs(ids(loups)),
+        skip: true,
+        apply(a) {
+          if (!a) return;
+          S.mem.chevalierNuit = S.nuit + 1;
+          S.mem.chevalierId = a[0];
+          log(nom(a[0]) + " a le tétanos (Chevalier) : il mourra la nuit prochaine.", true);
+        },
+      };
+    },
+
     dormir: () => ({
       titre: "La nuit tombe",
       dire: "C'est la nuit, tout le village s'endort. Fermez les yeux.",
@@ -347,7 +399,7 @@ const Engine = (() => {
       return {
         titre: "Le Voleur",
         dire: reveil("Voleur") + " Tu peux échanger ta carte avec l'une de ces cartes.",
-        texte: "Voleur : " + p.nom + ". Montrez-lui les cartes non distribuées." + (deuxLoups ? " Les deux cartes sont des Loups-Garous : il est obligé d'en prendre une." : ""),
+        texte: qui(p, "Voleur") + "Montrez-lui les cartes non distribuées." + (deuxLoups ? " Les deux cartes sont des Loups-Garous : il est obligé d'en prendre une." : ""),
         input: { kind: "choice", options: (deuxLoups ? [] : [{ v: "garder", label: "Garder sa carte de Voleur" }]).concat(cartes) },
         apply(a) {
           if (a === "garder" || a === null) { log(p.nom + " (Voleur) garde sa carte.", true); return; }
@@ -367,7 +419,7 @@ const Engine = (() => {
       return {
         titre: "Cupidon",
         dire: reveil("Cupidon") + " Désigne deux joueurs qui seront amoureux.",
-        texte: "Cupidon : " + p.nom + ". Il peut se choisir lui-même.",
+        texte: qui(p, "Cupidon") + "Il peut se choisir lui-même.",
         input: choixJoueurs(ids(vivants()), 2, 2),
         apply(a) {
           S.mem.couple = a;
@@ -394,7 +446,7 @@ const Engine = (() => {
       return {
         titre: "L'Enfant Sauvage",
         dire: reveil("Enfant Sauvage") + " Désigne ton modèle.",
-        texte: "Enfant Sauvage : " + p.nom + ". Si le modèle meurt, il deviendra Loup-Garou.",
+        texte: qui(p, "Enfant Sauvage") + "Si le modèle meurt, il deviendra Loup-Garou.",
         input: choixJoueurs(ids(vivants().filter((x) => x.id !== p.id))),
         apply(a) {
           S.mem.modele = a[0];
@@ -410,7 +462,7 @@ const Engine = (() => {
       return {
         titre: "Le Chien-Loup",
         dire: reveil("Chien-Loup") + " Veux-tu être un simple Villageois ou un Loup-Garou ?",
-        texte: "Chien-Loup : " + p.nom + ".",
+        texte: qui(p, "Chien-Loup") + "",
         input: { kind: "choice", options: [{ v: "village", label: "🧑‍🌾 Villageois" }, { v: "loups", label: "🐺 Loup-Garou" }] },
         apply(a) {
           p.camp = a === "loups" ? "loups" : "village";
@@ -440,7 +492,7 @@ const Engine = (() => {
       return {
         titre: "Le Juge Bègue",
         dire: reveil("Juge Bègue") + " Montre-moi le signe que tu feras pour demander un second vote.",
-        texte: "Juge Bègue : " + p.nom + ". Retenez son signe : il ne pourra l'utiliser qu'une fois.",
+        texte: qui(p, "Juge Bègue") + "Retenez son signe : il ne pourra l'utiliser qu'une fois.",
         apply() {},
         dodo: "Juge Bègue, rendors-toi.",
       };
@@ -469,7 +521,7 @@ const Engine = (() => {
       return {
         titre: "Le Comédien",
         dire: reveil("Comédien") + " Choisis le personnage dont tu veux utiliser le pouvoir.",
-        texte: "Comédien : " + p.nom + ". Le pouvoir choisi sera appelé à son tour cette nuit, comme si le Comédien avait ce rôle. La carte est ensuite retirée.",
+        texte: qui(p, "Comédien") + "Le pouvoir choisi sera appelé à son tour cette nuit, comme si le Comédien avait ce rôle. La carte est ensuite retirée.",
         input: { kind: "choice", options: dispo.map((r) => ({ v: r, label: ROLE_BY_ID[r].icone + " " + roleNom(r) })) },
         skip: true,
         apply(a) {
@@ -489,7 +541,7 @@ const Engine = (() => {
       return {
         titre: "Le Salvateur",
         dire: reveil("Salvateur") + " Qui veux-tu protéger cette nuit ?",
-        texte: "Salvateur : " + p.nom + ". Il peut se protéger lui-même." + (dernier !== null && P(dernier) ? " Il ne peut pas protéger " + nom(dernier) + " (protégé la nuit dernière)." : ""),
+        texte: qui(p, "Salvateur") + "Il peut se protéger lui-même." + (dernier !== null && P(dernier) ? " Il ne peut pas protéger " + nom(dernier) + " (protégé la nuit dernière)." : ""),
         input: choixJoueurs(ids(vivants().filter((x) => x.id !== dernier))),
         skip: true,
         apply(a) {
@@ -507,7 +559,7 @@ const Engine = (() => {
       return {
         titre: "La Voyante",
         dire: reveil("Voyante") + " Désigne le joueur dont tu veux connaître la carte.",
-        texte: "Voyante : " + p.nom + ".",
+        texte: qui(p, "Voyante") + "",
         input: choixJoueurs(ids(vivants().filter((x) => x.id !== p.id))),
         skip: true,
         apply(a) {
@@ -527,13 +579,12 @@ const Engine = (() => {
       return {
         titre: "Le Renard",
         dire: reveil("Renard") + " Veux-tu flairer un groupe de trois joueurs ? Désigne celui du milieu.",
-        texte: "Renard : " + p.nom + ". L'appli calcule le groupe (le joueur désigné et ses deux voisins vivants).",
-        input: choixJoueurs(ids(vivants())),
+        texte: qui(p, "Renard") + "Sélectionnez les cartes du joueur désigné et de ses deux voisins vivants.",
+        input: choixJoueurs(ids(vivants()), 1, 3),
         skip: true,
         apply(a) {
           if (!a) return;
-          const v = voisins(a[0]);
-          const groupe = [v.gauche, P(a[0]), v.droite].filter(Boolean).filter((x, i, arr) => arr.findIndex((y) => y.id === x.id) === i);
+          const groupe = a.map(P);
           const loup = groupe.some(estLoup);
           if (!loup) S.mem.renardActif = false;
           log(p.nom + " (Renard) flaire " + listeFr(groupe.map((g) => g.nom)) + " : " + (loup ? "un loup !" : "aucun loup, il perd son pouvoir."), true);
@@ -548,7 +599,7 @@ const Engine = (() => {
       return {
         titre: "La Gitane",
         dire: reveil("Gitane") + " Veux-tu utiliser une carte Spiritisme ? Si oui, désigne le Médium.",
-        texte: "Gitane : " + p.nom + ". Au matin, le Médium posera la question aux morts.",
+        texte: qui(p, "Gitane") + "Au matin, le Médium posera la question aux morts.",
         input: choixJoueurs(ids(vivants())),
         skip: true,
         apply(a) {
@@ -585,7 +636,7 @@ const Engine = (() => {
       return {
         titre: "L'Infect Père des Loups",
         dire: "Infect Père des Loups, veux-tu infecter la victime ?",
-        texte: "Infect : " + p.nom + ". Victime : " + nom(v) + ". Une seule fois par partie : la victime ne meurt pas et devient secrètement Loup-Garou (elle garde son pouvoir).",
+        texte: qui(p, "Infect") + "Victime : " + nom(v) + ". Une seule fois par partie : la victime ne meurt pas et devient secrètement Loup-Garou (elle garde son pouvoir).",
         input: { kind: "choice", options: [{ v: "oui", label: "🦠 Infecter " + nom(v) }, { v: "non", label: "Non, elle sera dévorée" }] },
         apply(a) {
           if (a !== "oui") return;
@@ -604,7 +655,7 @@ const Engine = (() => {
       return {
         titre: "Le Grand Méchant Loup",
         dire: "Grand Méchant Loup, réveille-toi et désigne une seconde victime.",
-        texte: "Grand Méchant Loup : " + p.nom + ". Aucun loup n'est encore mort, il dévore une seconde victime (pas un loup).",
+        texte: qui(p, "Grand Méchant Loup") + "Aucun loup n'est encore mort, il dévore une seconde victime (pas un loup).",
         input: choixJoueurs(ids(vivants().filter((x) => !estLoup(x) && x.id !== S.night.victimeLoups))),
         skip: true,
         apply(a) {
@@ -639,7 +690,7 @@ const Engine = (() => {
       return {
         titre: "Le Boulanger",
         dire: "Les Loups-Garous se rendorment… (le Boulanger peut ouvrir les yeux.)",
-        texte: "Boulanger : " + p.nom + ". Laissez-lui un instant pour voir les loups regagner leur place.",
+        texte: qui(p, "Boulanger") + "Laissez-lui un instant pour voir les loups regagner leur place.",
         apply() {},
       };
     },
@@ -653,7 +704,7 @@ const Engine = (() => {
       return {
         titre: "La Sorcière — potion de vie",
         dire: reveil("Sorcière") + (uniq.length ? " Voici la victime de cette nuit. Veux-tu utiliser ta potion de guérison ?" : " Personne n'a été attaqué cette nuit."),
-        texte: "Sorcière : " + p.nom + ". " + (uniq.length ? "Victime(s) : " + noms(uniq) + "." : "") + (N.protege !== null && uniq.includes(N.protege) ? " (" + nom(N.protege) + " est déjà protégé par le Salvateur.)" : ""),
+        texte: qui(p, "Sorcière") + "" + (uniq.length ? "Victime(s) : " + noms(uniq) + "." : "") + (N.protege !== null && uniq.includes(N.protege) ? " (" + nom(N.protege) + " est déjà protégé par le Salvateur.)" : ""),
         input: uniq.length ? { kind: "choice", options: uniq.map((v) => ({ v, label: "🧪 Sauver " + nom(v) })).concat([{ v: "non", label: "Ne pas utiliser" }]) } : null,
         dodo: S.mem.potionMort ? "" : "Sorcière, rendors-toi.",
         apply(a) {
@@ -671,7 +722,7 @@ const Engine = (() => {
       return {
         titre: "La Sorcière — potion de mort",
         dire: (S.mem.potionVie || S.night.sauve !== null ? "" : reveil("Sorcière") + " ") + "Veux-tu utiliser ta potion d'empoisonnement ?",
-        texte: "Sorcière : " + p.nom + ". Sélectionnez la cible ou passez.",
+        texte: qui(p, "Sorcière") + "Sélectionnez la cible ou passez.",
         input: choixJoueurs(ids(vivants())),
         skip: true,
         apply(a) {
@@ -692,7 +743,7 @@ const Engine = (() => {
       return {
         titre: "Le Joueur de Flûte",
         dire: reveil("Joueur de Flûte") + " Désigne deux joueurs à charmer.",
-        texte: "Joueur de Flûte : " + p.nom + ". Déjà charmés : " + (S.mem.charmes.filter((id) => P(id).alive).map(nom).join(", ") || "aucun") + ".",
+        texte: qui(p, "Joueur de Flûte") + "Déjà charmés : " + (S.mem.charmes.filter((id) => P(id).alive).map(nom).join(", ") || "aucun") + ".",
         input: choixJoueurs(ids(cand), Math.min(2, cand.length), Math.min(2, cand.length)),
         apply(a) {
           S.mem.charmes.push(...a);
@@ -722,7 +773,7 @@ const Engine = (() => {
       return {
         titre: "Le Pyromane",
         dire: reveil("Pyromane") + " Veux-tu mettre le feu à un bâtiment ?",
-        texte: "Pyromane : " + p.nom + ". Usage unique. " + (metierEnJeu() ? "Choisissez l'occupant du bâtiment incendié." : "Aucun bâtiment (métier) en jeu : sélectionnez quand même un joueur si vous jouez sans les bâtiments."),
+        texte: qui(p, "Pyromane") + "Usage unique. " + (metierEnJeu() ? "Choisissez l'occupant du bâtiment incendié." : "Aucun bâtiment (métier) en jeu : sélectionnez quand même un joueur si vous jouez sans les bâtiments."),
         input: choixJoueurs(ids(cand.length ? cand : vivants())),
         skip: true,
         apply(a) {
@@ -755,7 +806,7 @@ const Engine = (() => {
       return {
         titre: "Le Corbeau",
         dire: reveil("Corbeau") + " Désigne un joueur qui aura deux voix de plus contre lui demain.",
-        texte: "Corbeau : " + p.nom + ".",
+        texte: qui(p, "Corbeau") + "",
         input: choixJoueurs(ids(vivants())),
         skip: true,
         apply(a) {
@@ -792,14 +843,8 @@ const Engine = (() => {
         attaque(N.victimeBlanc, "loup-blanc");
         if (N.poison !== null) ajouter(N.poison, "sorciere");
         if (N.chefMeute !== null) ajouter(N.chefMeute, "incendie");
-        if (S.mem.chevalierNuit === S.nuit) {
-          // Premier loup vivant à gauche du Chevalier (ordre de la table).
-          const n = S.players.length;
-          const idx = S.players.findIndex((p) => p.id === S.mem.chevalierId);
-          for (let k = 1; k < n; k++) {
-            const p = S.players[(idx - k + n) % n];
-            if (p.alive && estLoup(p)) { ajouter(p.id, "tetanos"); break; }
-          }
+        if (S.mem.chevalierNuit === S.nuit && S.mem.chevalierId !== null) {
+          ajouter(S.mem.chevalierId, "tetanos");
           S.mem.chevalierNuit = null;
         }
 
@@ -872,7 +917,7 @@ const Engine = (() => {
       return {
         titre: "Le Bailli",
         dire: "Le bâtiment du " + metierNom(s.metier) + " est libre. Bailli, à quel Vagabond l'attribues-tu ?",
-        texte: "Bailli : " + b.nom + ".",
+        texte: qui(b, "Bailli") + "",
         input: choixJoueurs(ids(vag)),
         skip: true,
         apply(a) {
@@ -886,12 +931,11 @@ const Engine = (() => {
     ours: () => {
       const p = acteur("montreur-ours");
       if (!p) return null;
-      const v = voisins(p.id);
-      const grogne = [v.gauche, v.droite].some((x) => x && estLoup(x));
+      const loups = vivants().filter(estLoup);
       return {
         titre: "Le Montreur d'Ours",
-        dire: grogne ? "🐻 GRRRR ! L'ours du Montreur grogne !" : "L'ours du Montreur reste silencieux.",
-        texte: "Montreur : " + p.nom + ". Voisins vivants : " + [v.gauche, v.droite].filter(Boolean).map((x) => x.nom).join(" et ") + ".",
+        dire: "Si un voisin du Montreur est un loup : « GRRRR ! L'ours du Montreur grogne ! »",
+        texte: "Regardez les deux voisins vivants du Montreur d'Ours. Loups encore en vie : " + (loups.map((x) => x.nom).join(", ") || "aucun") + ".",
         apply() {},
       };
     },
@@ -933,7 +977,7 @@ const Engine = (() => {
       if (!b) return null;
       return {
         titre: "Le Barbier",
-        texte: "Barbier : " + b.nom + ". Qui rase-t-il ? (pas un Vagabond). S'il tue un villageois, il meurt aussi.",
+        texte: qui(b, "Barbier") + "Qui rase-t-il ? (pas un Vagabond). S'il tue un villageois, il meurt aussi.",
         input: choixJoueurs(ids(vivants().filter((x) => x.id !== b.id && x.metier !== "vagabond"))),
         skip: true,
         apply(a) {
@@ -953,7 +997,7 @@ const Engine = (() => {
       if (!c) return null;
       return {
         titre: "Le Confesseur",
-        texte: "Confesseur : " + c.nom + ". Qui entend-il en confession ?",
+        texte: qui(c, "Confesseur") + "Qui entend-il en confession ?",
         input: choixJoueurs(ids(vivants().filter((x) => x.id !== c.id))),
         skip: true,
         apply(a) {
@@ -971,7 +1015,7 @@ const Engine = (() => {
       if (!r) return null;
       return {
         titre: "Le Rebouteux",
-        texte: "Rebouteux : " + r.nom + ". À qui rend-il son pouvoir à usage unique ? (potions de la Sorcière, Infect, Renard, Pyromane, Juge Bègue, Barbier, Confesseur, Châtelain…)",
+        texte: qui(r, "Rebouteux") + "À qui rend-il son pouvoir à usage unique ? (potions de la Sorcière, Infect, Renard, Pyromane, Juge Bègue, Barbier, Confesseur, Châtelain…)",
         input: choixJoueurs(ids(vivants().filter((x) => x.id !== r.id))),
         skip: true,
         apply(a) {
@@ -1061,7 +1105,7 @@ const Engine = (() => {
       if (!ch || !P(s.id).alive) return null;
       return {
         titre: "Le Châtelain",
-        texte: "Châtelain : " + ch.nom + ". " + nom(s.id) + " demande-t-il la grâce, et le Châtelain l'accorde-t-il ? (usage unique)",
+        texte: qui(ch, "Châtelain") + "" + nom(s.id) + " demande-t-il la grâce, et le Châtelain l'accorde-t-il ? (usage unique)",
         input: { kind: "choice", options: [{ v: "oui", label: "🏰 Gracier " + nom(s.id) }, { v: "non", label: "Pas de grâce" }] },
         apply(a) {
           if (a !== "oui") return;
@@ -1124,7 +1168,7 @@ const Engine = (() => {
       if (!t) return null;
       return {
         titre: "Le Tavernier a-t-il voté contre le condamné ?",
-        texte: "Tavernier : " + t.nom + ". S'il a voté contre " + nom(s.id) + ", il perd définitivement son immunité.",
+        texte: qui(t, "Tavernier") + "S'il a voté contre " + nom(s.id) + ", il perd définitivement son immunité.",
         input: { kind: "choice", options: [{ v: "oui", label: "Oui, il perd son immunité" }, { v: "non", label: "Non" }] },
         apply(a) {
           if (a === "oui") { S.mem.tavernierImmun = false; log(t.nom + " (Tavernier) perd son immunité."); }
@@ -1137,7 +1181,7 @@ const Engine = (() => {
       if (!j || S.mem.jugeUtilise) return null;
       return {
         titre: "Le Juge Bègue",
-        texte: "Juge Bègue : " + j.nom + ". A-t-il fait son signe pour demander un second vote ?",
+        texte: qui(j, "Juge Bègue") + "A-t-il fait son signe pour demander un second vote ?",
         input: { kind: "choice", options: [{ v: "oui", label: "⚖️ Oui, second vote" }, { v: "non", label: "Non" }] },
         apply(a) {
           if (a !== "oui") return;
@@ -1290,7 +1334,6 @@ const Engine = (() => {
     noter,
     phaseLabel: () => phaseLabel(),
     estLoup,
-    voisins,
     nom,
     roleNom,
     metierNom,
