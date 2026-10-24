@@ -22,7 +22,8 @@ function partie() {
   let cartes = [...speciaux];
   if (Math.random() < 0.2) cartes.push("deux-soeurs", "deux-soeurs");
   if (Math.random() < 0.2) cartes.push("trois-freres", "trois-freres", "trois-freres");
-  for (let i = 0; i < nbLoups; i++) cartes.push("loup-garou");
+  const sansLoup = Math.random() < 0.1;
+  for (let i = 0; i < (sansLoup ? 0 : nbLoups); i++) cartes.push("loup-garou");
   while (cartes.length < n + 5) cartes.push("villageois");
   cartes = shuffle(cartes);
   const metiers = Math.random() < 0.4 ? shuffle(METIERS.map((m) => m.id)) : [];
@@ -31,6 +32,7 @@ function partie() {
     loupsEntreDevorer: Math.random() < 0.5,
     votesDetailles: Math.random() < 0.5,
     voteConfiance: Math.random() < 0.3,
+    pesteNoire: Math.random() < 0.3,
     joueurs: Array.from({ length: n }, (_, i) => ({ nom: "J" + i, role: cartes[i], metier: metiers.length ? metiers[i] || "vagabond" : null })),
     horsJeu: cartes.slice(n, n + 3),
   };
@@ -66,7 +68,7 @@ function partie() {
     Engine.repondre(rep);
     JSON.stringify(Engine.etat());
   }
-  throw new Error("Partie sans fin");
+  throw new Error("Partie sans fin : " + JSON.stringify({ config: Engine.etat().config, vivants: Engine.etat().players.filter((p) => p.alive).map((p) => p.role + "/" + p.camp), etape: Engine.etat().current, nuit: Engine.etat().nuit }));
 }
 
 const N = +(process.argv[2] || 500);

@@ -28,6 +28,7 @@
       loupsEntreDevorer: false,
       votesDetailles: false,
       voteConfiance: false,
+      pesteNoire: false,
       distribution: [],
     },
     lire(CLE_CONFIG) || {}
@@ -69,7 +70,7 @@
     if (total < nbJoueurs()) w.push("Il manque " + (nbJoueurs() - total) + " carte(s) pour " + nbJoueurs() + " joueurs.");
     else if (total !== attendu) w.push(total + " cartes au lieu de " + attendu + " attendues" + (cartesSupplementaires() ? " (joueurs + cartes du Voleur/Comédien)" : "") + ".");
     const loups = Object.entries(config.compo).filter(([id, n]) => n && ROLE_BY_ID[id] && ROLE_BY_ID[id].camp === "loups").reduce((s, [, n]) => s + n, 0);
-    if (loups === 0 && !config.compo["loup-blanc"]) w.push("Aucun Loup-Garou dans la composition.");
+    if (loups === 0 && !config.compo["loup-blanc"] && !config.pesteNoire) w.push("Aucun Loup-Garou dans la composition.");
     if (config.compo["deux-soeurs"] && config.compo["deux-soeurs"] !== 2) w.push("Il faut exactement 2 Sœurs.");
     if (config.compo["trois-freres"] && config.compo["trois-freres"] !== 3) w.push("Il faut exactement 3 Frères.");
     if (totalMetiers() > nbJoueurs()) w.push("Plus de bâtiments que de joueurs.");
@@ -223,6 +224,7 @@
         <label class="check"><input type="checkbox" data-opt="loupsEntreDevorer" ${config.loupsEntreDevorer ? "checked" : ""}> Les loups peuvent se dévorer entre eux</label>
         <label class="check"><input type="checkbox" data-opt="votesDetailles" ${config.votesDetailles ? "checked" : ""}> Noter le vote de chaque joueur (l'appli fait le décompte)</label>
         <label class="check"><input type="checkbox" data-opt="voteConfiance" ${config.voteConfiance ? "checked" : ""}> Proposer le vote de confiance (à chaque vote, vous choisissez : classique ou confiance)</label>
+        <label class="check"><input type="checkbox" data-opt="pesteNoire" ${config.pesteNoire ? "checked" : ""}> Peste noire possible (la compo peut n'avoir aucun loup ; le village peut voter « la peste »)</label>
         <div class="row" style="margin-top:8px">
           <button data-a="compo-rapide">⚡ Compo suggérée</button>
           <button class="ghost" data-a="compo-vide">Tout remettre à zéro</button>
@@ -383,6 +385,7 @@
                 ${cibles.filter((c) => c.id !== p.id).map((c) => `<option value="${c.id}">${esc(c.nom)}</option>`).join("")}
               </select>
             </label>`).join("")}</div>`;
+        if (inp.extra) saisie += `<div class="choix-options">${inp.extra.map((o) => `<button data-a="opt" data-v="${esc(o.v)}">${esc(o.label)}</button>`).join("")}</div>`;
       }
       const boutonValider = sp.fin
         ? `<button class="primary" data-a="nouvelle">🔁 Nouvelle partie</button>`
@@ -607,6 +610,7 @@
       loupsEntreDevorer: config.loupsEntreDevorer,
       votesDetailles: config.votesDetailles,
       voteConfiance: config.voteConfiance,
+      pesteNoire: config.pesteNoire,
       joueurs: config.joueurs.map((n, i) => ({
         nom: n.trim() || "Joueur " + (i + 1),
         role: config.distribution[i].role,

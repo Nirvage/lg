@@ -17,6 +17,7 @@ function partie(roles, opts = {}) {
     loupsEntreDevorer: !!opts.loupsEntreDevorer,
     votesDetailles: !!opts.votesDetailles,
     voteConfiance: !!opts.voteConfiance,
+    pesteNoire: !!opts.pesteNoire,
     joueurs: roles.map((r, i) => ({ nom: "J" + i, role: r, metier: (opts.metiers || [])[i] || null })),
     horsJeu: opts.horsJeu || [],
   });
@@ -298,6 +299,31 @@ Object.assign(tests, {
     partie(["loup-garou", "comedien", "cupidon", "voleur", "villageois"], { horsJeu: ["voyante", "villageois", "chasseur"] });
     jusqua("comedien");
     assert(!S().history.some((h) => h.current && ["voleur", "cupidon"].includes(h.current.t)));
+  },
+  "Peste noire sans loup : réveil simulé, victime au hasard, vote de la peste"() {
+    partie(["voyante", "villageois", "villageois", "villageois", "villageois"], { pesteNoire: true });
+    const sp = jusqua("loups");
+    assert(sp.secret && !sp.input);
+    Engine.repondre(null);
+    jusqua("vote");
+    assert.strictEqual(S().players.filter((p) => !p.alive).length, 1);
+    assert(Engine.spec().input.extra.some((o) => o.v === "peste"));
+    Engine.repondre("peste");
+    assert(Engine.spec().fin);
+    assert.strictEqual(S().winner.camp, "village");
+  },
+  "Peste noire avec des loups : voter la peste fait gagner les loups"() {
+    partie(["loup-garou", "villageois", "villageois", "villageois", "villageois"], { pesteNoire: true });
+    jusqua("vote");
+    Engine.repondre("peste");
+    assert.strictEqual(S().winner.camp, "loups");
+  },
+  "Comédien avec le pouvoir de l'Ange : gagne s'il est éliminé au vote suivant"() {
+    partie(["loup-garou", "comedien", "villageois", "villageois", "villageois"], { horsJeu: ["ange", "voyante", "chasseur"] });
+    rep("comedien", "ange");
+    rep("vote", [1]);
+    jusqua("victoire");
+    assert(Engine.spec().texte.includes("Comédien"));
   },
 });
 

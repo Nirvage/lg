@@ -30,6 +30,7 @@ const Engine = (() => {
         loupsEntreDevorer: !!setup.loupsEntreDevorer,
         votesDetailles: !!setup.votesDetailles,
         voteConfiance: !!setup.voteConfiance,
+        pesteNoire: !!setup.pesteNoire,
       },
       players,
       horsJeu: setup.horsJeu.slice(),
@@ -201,7 +202,12 @@ const Engine = (() => {
 
     // Ange : gagne s'il meurt au premier vote ou la première nuit.
     if (p.role === "ange" && ((S.jour === 0 && S.phase === "jour") || (S.nuit === 1 && S.phase === "nuit"))) {
-      S.mem.angeGagne = true;
+      S.mem.angeGagne = p.id;
+    }
+    // Comédien avec le pouvoir de l'Ange : gagne s'il est éliminé pendant la
+    // nuit où il l'a emprunté ou au vote qui suit.
+    if (p.role === "comedien" && aLePouvoir(p, "ange")) {
+      S.mem.angeGagne = p.id;
     }
 
     // Ancien tué par le village : les villageois perdent leurs pouvoirs.
@@ -259,7 +265,12 @@ const Engine = (() => {
 
   function victoire() {
     const v = vivants();
-    if (S.mem.angeGagne) return { camp: "ange", texte: "L'Ange a été éliminé dès le début : il gagne seul !" };
+    if (S.mem.angeGagne !== false && S.mem.angeGagne !== null) {
+      const a = P(S.mem.angeGagne);
+      return a && a.role === "comedien"
+        ? { camp: "ange", texte: "Le Comédien (" + a.nom + ") avait le pouvoir de l'Ange et a été éliminé : il gagne seul !" }
+        : { camp: "ange", texte: "L'Ange" + (a ? " (" + a.nom + ")" : "") + " a été éliminé dès le début : il gagne seul !" };
+    }
     if (v.length === 0) return { camp: "personne", texte: "Tout le monde est mort : personne ne gagne." };
     const couple = S.mem.couple;
     if (couple && v.length === 2 && couple.every((id) => P(id).alive)) {
@@ -279,7 +290,8 @@ const Engine = (() => {
     const blanc = v.find((p) => p.role === "loup-blanc");
     if (blanc && v.length === 1) return { camp: "loup-blanc", texte: "Le Loup-Garou Blanc (" + blanc.nom + ") est le dernier survivant : il gagne seul !" };
     const loups = v.filter(estLoup);
-    if (loups.length === 0) return { camp: "village", texte: "Il n'y a plus aucun Loup-Garou : le village gagne !" };
+    // Peste noire : sans loup dès le départ, le village ne gagne qu'en votant la peste.
+    if (loups.length === 0 && !(S.config.pesteNoire && sansLoupAuDepart())) return { camp: "village", texte: "Il n'y a plus aucun Loup-Garou : le village gagne !" };
     const nonLoups = v.filter((p) => !estLoup(p));
     if (nonLoups.length === 0 && !blanc) return { camp: "loups", texte: "Il ne reste que des Loups-Garous : les loups gagnent !" };
     // Autant de loups que de villageois : les loups gagnent, sauf si un
@@ -290,6 +302,21 @@ const Engine = (() => {
       if (speciaux.length === 0) return { camp: "loups", texte: "Il y a autant de Loups-Garous que de villageois et aucun rôle spécial ne peut plus les arrêter : les loups gagnent !" };
     }
     return null;
+  }
+
+  // Aucun joueur n'était loup au début de la partie (peste noire).
+  function sansLoupAuDepart() {
+    return !S.players.some((p) => campDeRole(p.roleInitial) === "loups" || p.roleInitial === "loup-blanc");
+  }
+
+  function votePeste() {
+    const sansLoup = vivants().filter(estLoup).length === 0;
+    S.winner = sansLoup
+      ? { camp: "village", texte: "Le village a reconnu la peste noire : il n'y avait aucun Loup-Garou. Le village gagne !" }
+      : { camp: "loups", texte: "Le village a cru à la peste noire… mais des Loups-Garous rôdaient encore. Les loups gagnent !" };
+    S.phase = "fin";
+    log("Le village vote pour la peste noire. " + S.winner.texte);
+    S.queue = [{ t: "fin" }];
   }
 
   // Un villageois dont le rôle peut encore changer l'issue de la partie.
@@ -354,6 +381,12 @@ const Engine = (() => {
     nuit: () => ({
       auto: true,
       apply() {
+        if (vivants().length === 0) {
+          S.winner = victoire();
+          S.phase = "fin";
+          S.queue = [{ t: "fin" }];
+          return;
+        }
         S.nuit += 1;
         S.phase = "nuit";
         S.night = { victimeLoups: null, victimeGml: null, victimeBlanc: null, protege: null, sauve: null, poison: null, infecte: null, chefMeute: null };
@@ -602,6 +635,20 @@ const Engine = (() => {
     loups: () => {
       const loups = vivants().filter(estLoup);
       const cibles = S.config.loupsEntreDevorer ? vivants() : vivants().filter((x) => !estLoup(x));
+      if (loups.length === 0 && S.config.pesteNoire && cibles.length) {
+        return {
+          titre: "Les Loups-Garous (peste noire)",
+          dire: "Les Loups-Garous, réveillez-vous, reconnaissez-vous et désignez votre victime.",
+          texte: "Il n'y a aucun loup : laissez passer un moment comme si les loups choisissaient. La peste frappe un joueur tiré au hasard quand vous continuez.",
+          secret: true,
+          apply() {
+            const v = cibles[Math.floor(Math.random() * cibles.length)];
+            S.night.victimeLoups = v.id;
+            log("La peste frappe " + v.nom + " (tirage au sort).", true);
+          },
+          dodo: "Les Loups-Garous, rendormez-vous.",
+        };
+      }
       if (loups.length === 0 || cibles.length === 0) return null;
       const notes = ["Loups : " + listeFr(loups.map((l) => l.nom + (l.role !== "loup-garou" ? " (" + roleNom(l.role) + ")" : "")))];
       const tav = avecMetier("tavernier")[0];
@@ -1046,6 +1093,19 @@ const Engine = (() => {
     },
 
     vote: (s) => {
+      const sp = voteBase(s);
+      if (!sp || !S.config.pesteNoire) return sp;
+      const bouton = { v: "peste", label: "🦠 Le village vote pour la peste noire" };
+      const input = sp.input && sp.input.kind === "choice"
+        ? { ...sp.input, options: sp.input.options.concat(bouton) }
+        : { ...sp.input, extra: (sp.input.extra || []).concat(bouton) };
+      return { ...sp, input, apply(a) { if (a === "peste") votePeste(); else sp.apply(a); } };
+    },
+  };
+
+  // Vote du village (classique, détaillé ou de confiance).
+  function voteBase(s) {
+    {
       const v = vivants();
       if (v.length < 2) return null;
       const notes = [];
@@ -1194,7 +1254,10 @@ const Engine = (() => {
         },
         apply(a) { resoudre(a); },
       };
-    },
+    }
+  }
+
+  Object.assign(H, {
 
     bouc: (s) => ({
       titre: "Le Bouc Émissaire",
@@ -1356,7 +1419,7 @@ const Engine = (() => {
         },
       };
     },
-  };
+  });
 
   // ---------- Boucle ----------
 
