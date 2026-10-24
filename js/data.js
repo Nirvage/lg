@@ -281,12 +281,29 @@ const METIER_BY_ID = Object.fromEntries(METIERS.map((m) => [m.id, m]));
 // Rôles qu'on peut mettre dans une composition (pas les statuts comme Capitaine).
 const ROLES_JOUABLES = ROLES.filter((r) => !r.statut);
 
-// Visuel d'une carte : l'image déposée dans img/cartes/<id>.png si elle
-// existe (par exemple un scan de vos cartes officielles), sinon l'icône.
+// Visuel d'une carte, par ordre de priorité :
+// 1. la photo de la carte prise dans l'appli (page Cartes), gardée dans ce navigateur ;
+// 2. l'image déposée dans img/cartes/<id>.png ;
+// 3. l'icône.
+const CLE_PHOTOS = "lg-mj-photos";
+const PHOTOS = (() => {
+  try { return JSON.parse(localStorage.getItem(CLE_PHOTOS)) || {}; } catch (e) { return {}; }
+})();
+function enregistrerPhoto(id, dataUrl) {
+  if (dataUrl) PHOTOS[id] = dataUrl;
+  else delete PHOTOS[id];
+  try {
+    localStorage.setItem(CLE_PHOTOS, JSON.stringify(PHOTOS));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 const IMAGES_ABSENTES = new Set();
 function visuelCarte(id, classe) {
   const r = ROLE_BY_ID[id];
   const icone = r ? r.icone : "?";
+  if (PHOTOS[id]) return `<span class="visuel photo ${classe || ""}"><img src="${PHOTOS[id]}" alt="${r ? r.nom : ""}"></span>`;
   if (IMAGES_ABSENTES.has(id)) return `<span class="visuel sans-image ${classe || ""}"><span class="repli">${icone}</span></span>`;
   return `<span class="visuel ${classe || ""}"><img src="img/cartes/${id}.png" alt="" data-carte="${id}"><span class="repli">${icone}</span></span>`;
 }

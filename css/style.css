@@ -239,3 +239,11 @@ details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .vote-ligne { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; align-items: center; }
 .jp .jeton { min-width: 40px; padding: 0 6px; }
 .jp .jeton.prive { border-color: var(--danger); background: transparent; }
+
+/* Photos des cartes */
+.visuel.photo img { object-fit: cover; aspect-ratio: 2 / 3; }
+.visuel.grand { width: 84px; }
+.photo-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.photo-actions .btn.small { min-height: 36px; padding: 4px 12px; font-size: 14px; cursor: pointer; }
+#compte.erreur { color: #ffb3b3; }
+.visuel.photo.ico img, .visuel.photo.mini img { aspect-ratio: 1; }
