@@ -234,10 +234,19 @@ Object.assign(tests, {
     Engine.basculerVote(2);
     assert(Engine.spec().input.votants.includes(2));
   },
+  "Vote de confiance : choix classique à un tour"() {
+    partie(["loup-garou", "villageois", "villageois", "villageois", "villageois", "villageois"], { voteConfiance: true });
+    jusqua("vote");
+    Engine.repondre("classique");
+    assert(Engine.spec().input.extra, "vote classique attendu");
+  },
   "Vote de confiance : chaîne depuis le Capitaine jusqu'au dernier suspect"() {
     partie(["loup-garou", "villageois", "villageois", "villageois", "villageois", "villageois"], { voteConfiance: true, capitaine: true });
     rep("election", [2]);
-    let sp = jusqua("vote");
+    jusqua("vote");
+    assert.strictEqual(Engine.spec().input.kind, "choice");
+    Engine.repondre("confiance");
+    let sp = Engine.spec();
     assert(sp.dire.includes("J2"));
     assert(!sp.input.candidats.includes(2));
     Engine.repondre([3]);              // J2 innocente J3

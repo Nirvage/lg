@@ -1084,7 +1084,21 @@ const Engine = (() => {
         S.mem.premierVoteFait = true;
       };
 
-      if (S.config.voteConfiance) {
+      // Avec l'option, le meneur choisit à chaque vote : classique ou confiance.
+      if (S.config.voteConfiance && s.mode === undefined) {
+        return {
+          titre: s.n === 2 ? "Second vote (Juge Bègue)" : "Quel vote ce tour-ci ?",
+          texte: "Choisissez le type de vote pour ce tour.",
+          notes: notes.join(" "),
+          input: { kind: "choice", options: [
+            { v: "classique", label: "🗳️ Vote classique" },
+            { v: "confiance", label: "🤝 Vote de confiance" },
+          ] },
+          apply(a) { S.queue.unshift({ ...s, mode: a === "confiance" ? "confiance" : "classique" }); },
+        };
+      }
+
+      if (s.mode === "confiance") {
         // Vote de confiance : chaque joueur innocente un autre joueur, en
         // commençant par le Capitaine ; le dernier non-innocenté est éliminé.
         const titre = s.n === 2 ? "Second vote de confiance (Juge Bègue)" : "Vote de confiance";
