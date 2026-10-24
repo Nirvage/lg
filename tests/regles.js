@@ -16,6 +16,7 @@ function partie(roles, opts = {}) {
     capitaine: !!opts.capitaine,
     loupsEntreDevorer: !!opts.loupsEntreDevorer,
     votesDetailles: !!opts.votesDetailles,
+    voteConfiance: !!opts.voteConfiance,
     joueurs: roles.map((r, i) => ({ nom: "J" + i, role: r, metier: (opts.metiers || [])[i] || null })),
     horsJeu: opts.horsJeu || [],
   });
@@ -232,6 +233,21 @@ Object.assign(tests, {
     assert(!Engine.peutVoter(2));
     Engine.basculerVote(2);
     assert(Engine.spec().input.votants.includes(2));
+  },
+  "Vote de confiance : chaîne depuis le Capitaine jusqu'au dernier suspect"() {
+    partie(["loup-garou", "villageois", "villageois", "villageois", "villageois", "villageois"], { voteConfiance: true, capitaine: true });
+    rep("election", [2]);
+    let sp = jusqua("vote");
+    assert(sp.dire.includes("J2"));
+    assert(!sp.input.candidats.includes(2));
+    Engine.repondre([3]);              // J2 innocente J3
+    assert(!Engine.spec().input.candidats.includes(3));
+    Engine.repondre([4]);              // J3 innocente J4
+    Engine.repondre([2]);              // J4 innocente J2 (le Capitaine)
+    Engine.repondre([1]);              // J2 innocente J1 → reste J0
+    assert(Engine.spec().texte.includes("J0"));
+    jusqua("victoire");
+    assert(!alive(0));
   },
 });
 

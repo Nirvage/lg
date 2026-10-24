@@ -29,6 +29,7 @@ const Engine = (() => {
         capitaine: !!setup.capitaine,
         loupsEntreDevorer: !!setup.loupsEntreDevorer,
         votesDetailles: !!setup.votesDetailles,
+        voteConfiance: !!setup.voteConfiance,
       },
       players,
       horsJeu: setup.horsJeu.slice(),
@@ -1082,6 +1083,42 @@ const Engine = (() => {
         S.queue.unshift(...suite);
         S.mem.premierVoteFait = true;
       };
+
+      if (S.config.voteConfiance) {
+        // Vote de confiance : chaque joueur innocente un autre joueur, en
+        // commençant par le Capitaine ; le dernier non-innocenté est éliminé.
+        const titre = s.n === 2 ? "Second vote de confiance (Juge Bègue)" : "Vote de confiance";
+        const cap = S.mem.capitaine !== null && P(S.mem.capitaine) && P(S.mem.capitaine).alive ? S.mem.capitaine : null;
+        if (s.courant === undefined && cap === null) {
+          return {
+            titre,
+            dire: "Vote de confiance : chacun à son tour va innocenter un joueur. Le dernier joueur qui n'a pas été innocenté sera éliminé.",
+            texte: "Il n'y a pas de Capitaine : choisissez le joueur qui commence.",
+            input: choixJoueurs(ids(v)),
+            apply(a) { S.queue.unshift({ ...s, courant: a[0], innocentes: [] }); },
+          };
+        }
+        const courant = s.courant === undefined ? cap : s.courant;
+        const innocentes = s.innocentes || [];
+        const restants = v.filter((x) => !innocentes.includes(x.id));
+        if (!P(courant).alive || restants.length < 2) return null;
+        return {
+          titre,
+          dire: (innocentes.length === 0 ? "Vote de confiance : le dernier joueur qui n'aura pas été innocenté sera éliminé. " : "") + nom(courant) + ", quel joueur innocentes-tu ?",
+          texte: (innocentes.length ? "Déjà innocentés : " + innocentes.map(nom).join(", ") + ". " : "") + "Encore suspects : " + restants.map((x) => x.nom).join(", ") + ".",
+          notes: notes.join(" "),
+          input: choixJoueurs(ids(restants.filter((x) => x.id !== courant))),
+          apply(a) {
+            const inn = innocentes.concat(a[0]);
+            log(nom(courant) + " innocente " + nom(a[0]) + ".");
+            const reste = v.filter((x) => !inn.includes(x.id));
+            if (reste.length === 1) {
+              resoudre([reste[0].id], null);
+              S.queue.unshift(info("Résultat du vote de confiance", reste[0].nom + " est le seul à ne pas avoir été innocenté : il est désigné."));
+            } else S.queue.unshift({ ...s, courant: a[0], innocentes: inn });
+          },
+        };
+      }
 
       if (S.config.votesDetailles) {
         return {

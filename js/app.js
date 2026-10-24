@@ -27,6 +27,7 @@
       capitaine: true,
       loupsEntreDevorer: false,
       votesDetailles: false,
+      voteConfiance: false,
       distribution: [],
     },
     lire(CLE_CONFIG) || {}
@@ -221,6 +222,7 @@
         <label class="check"><input type="checkbox" data-opt="capitaine" ${config.capitaine ? "checked" : ""}> Élire un Capitaine le premier jour</label>
         <label class="check"><input type="checkbox" data-opt="loupsEntreDevorer" ${config.loupsEntreDevorer ? "checked" : ""}> Les loups peuvent se dévorer entre eux</label>
         <label class="check"><input type="checkbox" data-opt="votesDetailles" ${config.votesDetailles ? "checked" : ""}> Noter le vote de chaque joueur (l'appli fait le décompte)</label>
+        <label class="check"><input type="checkbox" data-opt="voteConfiance" ${config.voteConfiance ? "checked" : ""}> Vote de confiance (chacun innocente un joueur, en commençant par le Capitaine ; le dernier non-innocenté est éliminé)</label>
         <div class="row" style="margin-top:8px">
           <button data-a="compo-rapide">⚡ Compo suggérée</button>
           <button class="ghost" data-a="compo-vide">Tout remettre à zéro</button>
@@ -508,6 +510,7 @@
       capitaine: config.capitaine,
       loupsEntreDevorer: config.loupsEntreDevorer,
       votesDetailles: config.votesDetailles,
+      voteConfiance: config.voteConfiance,
       joueurs: config.joueurs.map((n, i) => ({
         nom: n.trim() || "Joueur " + (i + 1),
         role: config.distribution[i].role,
