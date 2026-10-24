@@ -31,6 +31,7 @@
       pesteNoire: false,
       voleurVole: false,
       mjCupidon: false,
+      sansVillageois: false,
       distribution: [],
     },
     lire(CLE_CONFIG) || {}
@@ -54,7 +55,8 @@
   // ---------- Calculs de composition ----------
 
   const extensionsActives = () => Object.keys(EXTENSIONS).filter((e) => config.extensions[e]);
-  const rolesVisibles = () => ROLES_JOUABLES.filter((r) => config.extensions[r.ext]);
+  const SIMPLES = ["villageois", "villageois-villageois"];
+  const rolesVisibles = () => ROLES_JOUABLES.filter((r) => config.extensions[r.ext] && !(config.sansVillageois && SIMPLES.includes(r.id)));
   const totalCompo = () => Object.entries(config.compo).reduce((s, [id, n]) => s + (ROLE_BY_ID[id] && config.extensions[ROLE_BY_ID[id].ext] ? n : 0), 0);
   const totalMetiers = () => (config.extensions.village ? Object.values(config.metiers).reduce((s, n) => s + n, 0) : 0);
   const nbJoueurs = () => config.joueurs.length;
@@ -85,14 +87,17 @@
     const c = {};
     c["loup-garou"] = Math.max(1, Math.round(n / 4));
     const speciaux = ["voyante", "sorciere", "chasseur", "cupidon", "petite-fille", "salvateur", "ancien", "idiot", "renard"];
+    // Sans Simple Villageois : on complète avec d'autres rôles du village.
+    if (config.sansVillageois) speciaux.push("bouc-emissaire", "corbeau", "chevalier", "montreur-ours", "juge-begue", "servante", "gitane", "enfant-sauvage", "chien-loup");
     let reste = n - c["loup-garou"];
     for (const id of speciaux) {
-      if (reste <= Math.ceil(n / 4)) break;
+      if (!config.sansVillageois && reste <= Math.ceil(n / 4)) break;
+      if (reste <= 0) break;
       if (!config.extensions[ROLE_BY_ID[id].ext]) continue;
       c[id] = 1;
       reste--;
     }
-    if (reste > 0) c.villageois = reste;
+    if (reste > 0 && !config.sansVillageois) c.villageois = reste;
     config.compo = c;
     sauverConfig();
   }
@@ -230,6 +235,7 @@
         <label class="check"><input type="checkbox" data-opt="pesteNoire" ${config.pesteNoire ? "checked" : ""}> Peste noire possible (la compo peut n'avoir aucun loup ; le village peut voter « la peste »)</label>
         <label class="check"><input type="checkbox" data-opt="voleurVole" ${config.voleurVole ? "checked" : ""}> Variante du Voleur : chaque nuit, le Voleur vole la carte d'un joueur, qui devient le Voleur à son tour (pas de cartes en plus)</label>
         <label class="check"><input type="checkbox" data-opt="mjCupidon" ${config.mjCupidon ? "checked" : ""}> MJ Cupidon : le meneur choisit lui-même le couple d'amoureux la première nuit (s'il n'y a pas de Cupidon)</label>
+        <label class="check"><input type="checkbox" data-opt="sansVillageois" ${config.sansVillageois ? "checked" : ""}> Sans Simple Villageois : uniquement des rôles à pouvoir (la compo suggérée en tient compte)</label>
         <div class="row" style="margin-top:8px">
           <button data-a="compo-rapide">⚡ Compo suggérée</button>
           <button class="ghost" data-a="compo-vide">Tout remettre à zéro</button>
@@ -698,7 +704,9 @@
       render();
     } else if (t.dataset.opt) {
       config[t.dataset.opt] = t.checked;
+      if (t.dataset.opt === "sansVillageois" && t.checked) SIMPLES.forEach((id) => delete config.compo[id]);
       sauverConfig();
+      if (t.dataset.opt === "sansVillageois") render();
     } else if (t.dataset.distribRole !== undefined) {
       config.distribution[+t.dataset.distribRole].role = t.value;
       sauverConfig();
