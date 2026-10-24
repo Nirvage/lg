@@ -119,6 +119,13 @@ const Engine = (() => {
 
   // Joueurs vivants pouvant utiliser le pouvoir du rôle (y compris le Comédien
   // qui l'a emprunté pour la nuit).
+  // Le joueur a-t-il ce pouvoir maintenant ? (son rôle, ou celui emprunté
+  // par le Comédien jusqu'à la nuit suivante)
+  function aLePouvoir(p, roleId) {
+    if (!pouvoirOK(p)) return false;
+    return p.role === roleId || (p.role === "comedien" && S.mem.comedienPouvoir === roleId);
+  }
+
   function acteurs(roleId) {
     const res = vivants().filter((p) => p.role === roleId && pouvoirOK(p));
     if (S.mem.comedienPouvoir === roleId) {
@@ -198,21 +205,21 @@ const Engine = (() => {
     }
 
     // Ancien tué par le village : les villageois perdent leurs pouvoirs.
-    if (p.role === "ancien" && ["vote", "sorciere", "chasseur", "bouc", "barbier"].includes(cause) && !S.mem.pouvoirsPerdus) {
+    if (aLePouvoir(p, "ancien") && ["vote", "sorciere", "chasseur", "bouc", "barbier"].includes(cause) && !S.mem.pouvoirsPerdus) {
       S.mem.pouvoirsPerdus = true;
       S.pending.push(info("L'Ancien est mort", "L'Ancien a été tué par le village : tous les villageois perdent leurs pouvoirs spéciaux jusqu'à la fin de la partie."));
       log("Les villageois perdent leurs pouvoirs (mort de l'Ancien).");
     }
 
     // Chevalier dévoré : le premier loup à sa gauche mourra la nuit suivante.
-    if (p.role === "chevalier" && cause === "loups" && pouvoirOK(p)) {
+    if (aLePouvoir(p, "chevalier") && cause === "loups") {
       S.mem.chevalierNuit = S.nuit + 1;
       S.mem.chevalierId = p.id;
       log("Le Chevalier a contaminé un loup : il mourra la nuit prochaine.", true);
     }
 
     // Chasseur : tire immédiatement.
-    if (p.role === "chasseur" && pouvoirOK(p)) {
+    if (aLePouvoir(p, "chasseur")) {
       S.pending.push({ t: "chasseur", id: p.id });
     }
 
@@ -814,9 +821,11 @@ const Engine = (() => {
           if (!p.alive) return;
           if (N.protege === id) { notes.push(p.nom + " a été protégé par le Salvateur."); return; }
           if (N.sauve === id) { notes.push(p.nom + " a été sauvé par la Sorcière."); return; }
-          if (p.role === "ancien" && pouvoirOK(p) && S.mem.ancienVies > 1 && cause === "loups") {
-            S.mem.ancienVies -= 1;
-            notes.push("L'Ancien (" + p.nom + ") a résisté à l'attaque des loups (il n'a plus qu'une vie).");
+          const cleVies = p.role === "comedien" ? "ancienViesComedien" : "ancienVies";
+          if (S.mem[cleVies] === undefined) S.mem[cleVies] = 2;
+          if (aLePouvoir(p, "ancien") && S.mem[cleVies] > 1 && cause === "loups") {
+            S.mem[cleVies] -= 1;
+            notes.push((p.role === "comedien" ? "Le Comédien (" + p.nom + "), avec le pouvoir de l'Ancien," : "L'Ancien (" + p.nom + ")") + " a résisté à l'attaque des loups (il n'a plus qu'une vie).");
             return;
           }
           if (p.metier === "tavernier" && S.mem.tavernierImmun) { notes.push("Le Tavernier (" + p.nom + ") ne peut pas être dévoré."); return; }
@@ -1222,7 +1231,7 @@ const Engine = (() => {
       const servante = acteur("servante");
       const proposeServante = servante && servante.id !== c.id;
       const executer = () => {
-        if (c.role === "idiot" && pouvoirOK(c) && !S.mem.idiotRevele) {
+        if (aLePouvoir(c, "idiot") && !S.mem.idiotRevele) {
           S.mem.idiotRevele = true;
           if (S.mem.capitaine === c.id) S.mem.capitaine = null;
           log(c.nom + " révèle qu'il est l'Idiot du Village : il est épargné mais ne vote plus.");

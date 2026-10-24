@@ -281,6 +281,19 @@ Object.assign(tests, {
       Engine.repondre(null);
     }
   },
+  "Comédien avec le pouvoir de l'Ancien : survit à l'attaque des loups"() {
+    partie(["loup-garou", "comedien", "villageois", "villageois", "villageois"], { horsJeu: ["ancien", "chasseur", "voyante"] });
+    rep("comedien", "ancien");
+    rep("loups", [1]);
+    jusqua("vote");
+    assert(alive(1));
+  },
+  "Comédien avec le pouvoir du Chasseur : tire en mourant"() {
+    partie(["loup-garou", "comedien", "villageois", "villageois", "villageois", "villageois"], { horsJeu: ["chasseur", "voyante", "ancien"] });
+    rep("comedien", "chasseur");
+    rep("loups", [1]);
+    jusqua("chasseur");
+  },
 });
 
 let ok = 0;
