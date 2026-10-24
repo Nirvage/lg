@@ -473,21 +473,37 @@
       <span id="chrono-val" class="chrono-val ${fini ? "fini" : ""}" aria-live="off">${texteChrono()}</span>
       <div class="chrono-boutons">
         ${[1, 2, 3, 5].map((m) => `<button class="small ${chrono.duree === m * 60000 ? "actif" : ""}" data-a="chrono" data-v="${m * 60}">${m} min</button>`).join("")}
-        <button class="small ${chrono.duree === 0 && (chrono.debut || chrono.accumule) ? "actif" : ""}" data-a="chrono" data-v="libre" title="Chronomètre sans limite">⏱️</button>
+        <button class="small ${chrono.duree === 0 && (chrono.debut || chrono.accumule) ? "actif" : ""}" data-a="chrono" data-v="libre" title="Chronomètre sans limite, qui compte vers le haut">⏱️ Libre</button>
         <button class="small" data-a="chrono" data-v="pause" aria-label="${chrono.debut ? "Pause" : "Démarrer"}">${chrono.debut ? "⏸" : "▶"}</button>
         <button class="small" data-a="chrono" data-v="zero" aria-label="Remettre à zéro">↺</button>
       </div>
     </div>`;
   }
+  // Le son doit être « débloqué » pendant un appui (iPhone, Android) : on
+  // prépare le contexte audio dès qu'on touche un bouton du chrono.
+  let audio = null;
+  function preparerSon() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === "suspended") audio.resume();
+      const b = audio.createBuffer(1, 1, 22050);
+      const src = audio.createBufferSource();
+      src.buffer = b;
+      src.connect(audio.destination);
+      src.start(0);
+    } catch (e) { /* son indisponible */ }
+  }
   function sonner() {
     try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch (e) { /* rien */ }
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      [0, 0.35, 0.7].forEach((t) => {
+      if (!audio) return;
+      if (audio.state === "suspended") audio.resume();
+      const ctx = audio;
+      [0, 0.35, 0.7, 1.4, 1.75, 2.1].forEach((t) => {
         const o = ctx.createOscillator();
         const g = ctx.createGain();
         o.frequency.value = 880;
-        g.gain.setValueAtTime(0.25, ctx.currentTime + t);
+        g.gain.setValueAtTime(0.6, ctx.currentTime + t);
         g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.3);
         o.connect(g).connect(ctx.destination);
         o.start(ctx.currentTime + t);
@@ -496,6 +512,7 @@
     } catch (e) { /* son indisponible */ }
   }
   function actionChrono(v) {
+    preparerSon();
     if (v === "pause") {
       if (chrono.debut) { chrono.accumule = ecoule(); chrono.debut = null; }
       else chrono.debut = Date.now();

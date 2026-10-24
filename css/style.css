@@ -258,5 +258,5 @@ details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .chrono-val { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 96px; }
 .chrono-val.fini { color: var(--danger); font-size: 20px; }
 .chrono-boutons { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-.chrono-boutons button { min-width: 44px; }
+.chrono-boutons button { min-width: 44px; white-space: nowrap; }
 .chrono-boutons button.actif { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
