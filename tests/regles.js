@@ -370,6 +370,15 @@ Object.assign(tests, {
     const loups = jusqua("loups");
     assert(!loups.input.candidats.includes(0));
   },
+  "Voleur variante : le joueur volé vole à son tour la nuit suivante"() {
+    partie(["voleur", "loup-garou", "voyante", "villageois", "villageois", "villageois"], { voleurVole: true });
+    rep("voleur", [2]);
+    assert.strictEqual(S().players[2].role, "voleur");
+    jusqua("vote");
+    rep("voleur", [0]);
+    assert.strictEqual(S().players[2].role, "voyante");
+    assert.strictEqual(S().players[0].role, "voleur");
+  },
   "Sans Comédien, pas d'appel fictif"() {
     partie(["loup-garou", "voleur", "villageois", "villageois", "villageois"], { horsJeu: ["salvateur", "villageois"] });
     const vues = [];

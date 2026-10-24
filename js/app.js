@@ -227,7 +227,7 @@
         <label class="check"><input type="checkbox" data-opt="votesDetailles" ${config.votesDetailles ? "checked" : ""}> Noter le vote de chaque joueur (l'appli fait le décompte)</label>
         <label class="check"><input type="checkbox" data-opt="voteConfiance" ${config.voteConfiance ? "checked" : ""}> Proposer le vote de confiance (à chaque vote, vous choisissez : classique ou confiance)</label>
         <label class="check"><input type="checkbox" data-opt="pesteNoire" ${config.pesteNoire ? "checked" : ""}> Peste noire possible (la compo peut n'avoir aucun loup ; le village peut voter « la peste »)</label>
-        <label class="check"><input type="checkbox" data-opt="voleurVole" ${config.voleurVole ? "checked" : ""}> Variante du Voleur : il vole la carte d'un joueur la première nuit, et ce joueur devient le Voleur (pas de cartes en plus)</label>
+        <label class="check"><input type="checkbox" data-opt="voleurVole" ${config.voleurVole ? "checked" : ""}> Variante du Voleur : chaque nuit, le Voleur vole la carte d'un joueur, qui devient le Voleur à son tour (pas de cartes en plus)</label>
         <div class="row" style="margin-top:8px">
           <button data-a="compo-rapide">⚡ Compo suggérée</button>
           <button class="ghost" data-a="compo-vide">Tout remettre à zéro</button>

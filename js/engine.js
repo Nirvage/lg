@@ -352,6 +352,8 @@ const Engine = (() => {
     const n1 = S.nuit === 1;
     // Le Comédien se réveille en premier pour choisir son pouvoir de la nuit.
     const e = [{ t: "dormir" }, { t: "comedien" }];
+    // Variante du Voleur : le Voleur (ou le dernier volé) vole chaque nuit.
+    if (!n1 && S.config.voleurVole) e.push({ t: "voleur" });
     if (n1) {
       e.push({ t: "voleur" }, { t: "cupidon" }, { t: "amoureux" }, { t: "enfant" }, { t: "chienloup" },
         { t: "sectaire" }, { t: "juge-signe" });
@@ -392,12 +394,14 @@ const Engine = (() => {
         if (!a || !a.length) { log(p.nom + " (Voleur) ne vole rien.", true); return; }
         const v = P(a[0]);
         const vole = v.role;
+        // Le camp suit la carte, sauf un joueur déjà passé chez les loups (infecté…).
+        const campVoleur = p.camp;
         p.role = vole;
-        p.camp = v.camp;
+        p.camp = campDeRole(vole) === "loups" || campVoleur === "loups" ? "loups" : vole === "chien-loup" ? v.camp : campDeRole(vole);
+        v.camp = v.camp === "loups" && campDeRole(vole) !== "loups" ? "loups" : "village";
         v.role = "voleur";
-        v.camp = "village";
         log(p.nom + " (Voleur) vole la carte de " + v.nom + " et devient " + roleNom(vole) + ". " + v.nom + " devient le Voleur.", true);
-        S.queue.unshift(info("Carte volée", "Le Voleur est rendormi. Touchez " + v.nom + " : sa carte (" + roleNom(vole) + ") a été volée, il ou elle est désormais le Voleur, sans pouvoir, dans le camp du village. Montrez-lui la carte du Voleur.", { secret: true }));
+        S.queue.unshift(info("Carte volée", "Le Voleur est rendormi. Touchez " + v.nom + " : sa carte (" + roleNom(vole) + ") a été volée, il ou elle est désormais le Voleur et pourra voler une carte à son tour la nuit prochaine. Montrez-lui la carte du Voleur.", { secret: true }));
       },
       dodo: "Voleur, rendors-toi.",
     };
