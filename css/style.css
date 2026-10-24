@@ -260,3 +260,4 @@ details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .chrono-boutons { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
 .chrono-boutons button { min-width: 44px; white-space: nowrap; }
 .chrono-boutons button.actif { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.jp .ico.cache { opacity: .6; font-size: 20px; }

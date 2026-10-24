@@ -41,6 +41,7 @@
   // Sections repliables de l'écran de partie restant ouvertes entre deux rendus.
   const ouverts = { joueurs: true, outils: false, journal: false };
   const ouvert = (k) => (ouverts[k] ? "open" : "");
+  let rolesReveles = false; // rôles des vivants masqués par défaut dans la liste
 
   const partieSauvee = lire(CLE_PARTIE);
   if (partieSauvee && partieSauvee.players && partieSauvee.phase !== "fin") {
@@ -330,13 +331,14 @@
 
   // ---------- Partie ----------
 
-  function badges(p, S) {
+  // secrets = false : n'affiche que les infos publiques (capitaine, métier, corbeau…)
+  function badges(p, S, secrets = true) {
     const b = [];
     if (S.mem.capitaine === p.id) b.push("👑");
-    if (S.mem.couple && S.mem.couple.includes(p.id)) b.push("❤️");
-    if (S.mem.charmes.includes(p.id)) b.push("🎶");
-    if (S.phase === "nuit" && S.night && S.night.protege === p.id) b.push("🛡️");
-    if (p.camp === "loups" && ROLE_BY_ID[p.role] && ROLE_BY_ID[p.role].camp !== "loups") b.push("🐺");
+    if (secrets && S.mem.couple && S.mem.couple.includes(p.id)) b.push("❤️");
+    if (secrets && S.mem.charmes.includes(p.id)) b.push("🎶");
+    if (secrets && S.phase === "nuit" && S.night && S.night.protege === p.id) b.push("🛡️");
+    if (secrets && p.camp === "loups" && ROLE_BY_ID[p.role] && ROLE_BY_ID[p.role].camp !== "loups") b.push("🐺");
     if (p.metier) b.push(METIER_BY_ID[p.metier].icone);
     if (S.mem.corbeau === p.id) b.push("🐦‍⬛");
     if (p.metier === "tavernier" && S.mem.tavernierImmun) b.push("🛡️🍺");
@@ -419,15 +421,16 @@
       ${corps}
       <details class="panel section" data-k="joueurs" ${ouvert("joueurs")}>
         <summary>Joueurs</summary>
+        ${S.phase === "fin" ? "" : `<button class="small" data-a="voir-roles" style="margin-top:8px">${rolesReveles ? "🙈 Masquer les rôles" : "👁️ Afficher les rôles"}</button>`}
         <div class="joueurs-partie" style="margin-top:8px">
-          ${S.players.map((p) => `
+          ${S.players.map((p) => { const vu = rolesReveles || !p.alive || S.phase === "fin"; return `
             <div class="jp ${p.alive ? "" : "mort"}">
-              ${visuelCarte(p.role, "ico")}
+              ${vu ? visuelCarte(p.role, "ico") : `<span class="ico cache" aria-hidden="true">🂠</span>`}
               <span class="n">${esc(p.nom)}</span>
-              <span class="r">${esc(ROLE_BY_ID[p.role] ? ROLE_BY_ID[p.role].nom : p.role)}${p.metier ? " · " + esc(METIER_BY_ID[p.metier].nom) : ""}${p.alive ? "" : " — " + esc(p.mort.quand)}</span>
-              <span class="badges">${badges(p, S)}</span>
+              <span class="r">${vu ? esc(ROLE_BY_ID[p.role] ? ROLE_BY_ID[p.role].nom : p.role) : "Rôle caché"}${p.metier ? " · " + esc(METIER_BY_ID[p.metier].nom) : ""}${p.alive ? "" : " — " + esc(p.mort.quand)}</span>
+              <span class="badges">${badges(p, S, vu)}</span>
               ${p.alive ? `<button class="small jeton ${Engine.peutVoter(p.id) ? "" : "prive"}" data-a="jeton-vote" data-id="${p.id}" title="Peut voter ou non" aria-label="${Engine.peutVoter(p.id) ? "Peut voter" : "Ne peut pas voter"} : ${esc(p.nom)}">${Engine.peutVoter(p.id) ? "🗳️" : "🚫"}</button>` : ""}
-            </div>`).join("")}
+            </div>`; }).join("")}
         </div>
         <p class="muted small">Touchez 🗳️ / 🚫 pour indiquer qui peut voter (Bouc Émissaire, Institutrice…).</p>
         <p class="muted small">👑 Capitaine · ❤️ Amoureux · 🎶 Charmé · 🛡️ Protégé · 🐺 Devenu loup · 🐦‍⬛ Accusé par le Corbeau · 🛡️🍺 Tavernier immunisé</p>
@@ -622,6 +625,7 @@
   }
 
   function demarrer() {
+    rolesReveles = false;
     const setup = {
       capitaine: config.capitaine,
       loupsEntreDevorer: config.loupsEntreDevorer,
@@ -760,6 +764,7 @@
       }
       case "passer": repondre(null); return;
       case "chrono": actionChrono(b.dataset.v); break;
+      case "voir-roles": rolesReveles = !rolesReveles; break;
       case "jeton-vote":
         Engine.basculerVote(+b.dataset.id);
         sauverPartie();
