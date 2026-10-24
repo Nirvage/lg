@@ -400,6 +400,14 @@ Object.assign(tests, {
     assert(!alive(1));
     jusqua("chasseur");
   },
+  "Cannibalisme activé : les loups gagnent quand même à égalité"() {
+    partie(["loup-garou", "loup-garou", "villageois", "villageois", "villageois"], { loupsEntreDevorer: true });
+    rep("loups", [4]);
+    const v = jusqua("victoire");
+    assert(v.texte.includes("les loups gagnent"));
+    Engine.repondre("fin");
+    assert.strictEqual(S().winner.camp, "loups");
+  },
   "Sans Comédien, pas d'appel fictif"() {
     partie(["loup-garou", "voleur", "villageois", "villageois", "villageois"], { horsJeu: ["salvateur", "villageois"] });
     const vues = [];

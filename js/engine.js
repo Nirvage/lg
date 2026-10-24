@@ -305,7 +305,7 @@ const Engine = (() => {
     const coupleMixte = couple && couple.every((id) => P(id).alive) && estLoup(P(couple[0])) !== estLoup(P(couple[1]));
     if (!blanc && !coupleMixte && loups.length >= nonLoups.length) {
       const speciaux = nonLoups.filter(roleActif);
-      if (speciaux.length === 0) return { camp: "loups", texte: "Il y a autant de Loups-Garous que de villageois et aucun rôle spécial ne peut plus les arrêter : les loups gagnent !" };
+      if (speciaux.length === 0) return { camp: "loups", texte: "Il y a autant de Loups-Garous que de villageois et aucun rôle spécial ne peut plus les arrêter : les loups gagnent !" + (S.config.loupsEntreDevorer ? " (Le cannibalisme ne change rien : la partie s'arrête.)" : "") };
     }
     return null;
   }
