@@ -335,6 +335,29 @@ Object.assign(tests, {
     assert(!vo.titre.includes("fictif") && vo.input);
     assert(jusqua("corbeau").titre.includes("appel fictif"));
   },
+  "Comédien prend Cupidon la nuit 2 : le pouvoir s'active"() {
+    partie(["loup-garou", "comedien", "villageois", "villageois", "villageois", "villageois", "villageois"], { horsJeu: ["cupidon", "voyante", "enfant-sauvage"] });
+    rep("comedien", null);
+    jusqua("cupidon");
+    assert(Engine.spec().titre.includes("fictif"));
+    jusqua("vote");
+    rep("comedien", "cupidon");
+    const sp = Engine.spec();
+    assert.strictEqual(etape(), "cupidon");
+    assert(!sp.titre.includes("fictif") && sp.input);
+    Engine.repondre([3, 4]);
+    assert.strictEqual(etape(), "amoureux");
+    assert.deepStrictEqual(Array.from(S().mem.couple), [3, 4]);
+  },
+  "Comédien prend l'Enfant Sauvage : devient loup si son modèle meurt"() {
+    partie(["loup-garou", "comedien", "villageois", "villageois", "villageois", "villageois", "villageois"], { horsJeu: ["cupidon", "voyante", "enfant-sauvage"] });
+    jusqua("vote");
+    rep("comedien", "enfant-sauvage");
+    rep("enfant", [3]);
+    rep("loups", [3]);
+    jusqua("vote");
+    assert.strictEqual(S().players[1].camp, "loups");
+  },
   "Sans Comédien, pas d'appel fictif"() {
     partie(["loup-garou", "voleur", "villageois", "villageois", "villageois"], { horsJeu: ["salvateur", "villageois"] });
     const vues = [];

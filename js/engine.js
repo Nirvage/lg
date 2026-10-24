@@ -241,7 +241,10 @@ const Engine = (() => {
 
     // Enfant Sauvage : devient loup si son modèle meurt.
     if (S.mem.modele === p.id) {
-      avecRole("enfant-sauvage").forEach((e) => {
+      const enfants = avecRole("enfant-sauvage");
+      const parComedien = S.mem.modeleEnfant != null && P(S.mem.modeleEnfant);
+      if (parComedien && parComedien.alive && !enfants.includes(parComedien)) enfants.push(parComedien);
+      enfants.forEach((e) => {
         if (e.camp !== "loups") {
           e.camp = "loups";
           S.pending.push(info("Enfant Sauvage", "Le modèle de l'Enfant Sauvage (" + e.nom + ") est mort : l'Enfant Sauvage devient Loup-Garou. Ne l'annoncez pas ! Il se réveillera avec les loups à partir de la prochaine nuit.", { secret: true }));
@@ -337,6 +340,11 @@ const Engine = (() => {
   };
 
   // ---------- Construction des phases ----------
+
+  const ETAPES_PREMIERE_NUIT = {
+    voleur: ["voleur"], cupidon: ["cupidon", "amoureux"], "enfant-sauvage": ["enfant"],
+    "chien-loup": ["chienloup"], "juge-begue": ["juge-signe"],
+  };
 
   function etapesNuit() {
     const n1 = S.nuit === 1;
@@ -471,6 +479,7 @@ const Engine = (() => {
         input: choixJoueurs(ids(vivants().filter((x) => x.id !== p.id))),
         apply(a) {
           S.mem.modele = a[0];
+          S.mem.modeleEnfant = p.id;
           log(p.nom + " (Enfant Sauvage) choisit " + nom(a[0]) + " comme modèle.", true);
         },
         dodo: "Enfant Sauvage, rendors-toi.",
@@ -549,6 +558,8 @@ const Engine = (() => {
           if (!a) return;
           S.mem.comedienPouvoir = a;
           S.mem.comedienUtilisees.push(a);
+          // Un pouvoir de première nuit emprunté plus tard s'active quand même.
+          if (S.nuit > 1 && ETAPES_PREMIERE_NUIT[a]) S.queue.unshift(...ETAPES_PREMIERE_NUIT[a].map((t) => ({ t })));
           log(p.nom + " (Comédien) emprunte le pouvoir : " + roleNom(a) + ".", true);
         },
         dodo: "Comédien, rendors-toi.",
