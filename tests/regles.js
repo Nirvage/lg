@@ -258,6 +258,29 @@ Object.assign(tests, {
     jusqua("victoire");
     assert(!alive(0));
   },
+  "Ancien empoisonné par la Sorcière : les villageois perdent leurs pouvoirs"() {
+    partie(["loup-garou", "ancien", "sorciere", "voyante", "villageois", "villageois"]);
+    rep("loups", [5]);
+    rep("sorciere-vie", "non");
+    rep("sorciere-mort", [1]);
+    jusqua("vote");
+    assert(!alive(1));
+    assert(S().mem.pouvoirsPerdus);
+    Engine.repondre("personne");
+    jusqua("loups");
+  },
+  "Ancien abattu par le Chasseur : les villageois perdent leurs pouvoirs"() {
+    partie(["loup-garou", "ancien", "chasseur", "voyante", "villageois", "villageois", "villageois"]);
+    rep("loups", [2]);
+    rep("chasseur", [1]);
+    jusqua("vote");
+    assert(S().mem.pouvoirsPerdus);
+    Engine.repondre("personne");
+    for (let k = 0; k < 20 && etape() !== "loups"; k++) {
+      assert.notStrictEqual(etape(), "voyante", "la Voyante ne doit plus être appelée");
+      Engine.repondre(null);
+    }
+  },
 });
 
 let ok = 0;
