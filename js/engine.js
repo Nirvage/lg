@@ -1423,11 +1423,38 @@ const Engine = (() => {
 
   // ---------- Boucle ----------
 
+  // Étapes de nuit -> rôle appelé, pour les appels fictifs.
+  const ROLE_ETAPE = {
+    voleur: "voleur", cupidon: "cupidon", enfant: "enfant-sauvage", chienloup: "chien-loup",
+    sectaire: "abominable-sectaire", "juge-signe": "juge-begue", salvateur: "salvateur",
+    voyante: "voyante", renard: "renard", gitane: "gitane", "sorciere-vie": "sorciere",
+    flute: "joueur-de-flute", pyromane: "pyromane", corbeau: "corbeau",
+  };
+
+  // Avec un Comédien, les cartes mises de côté sont quand même appelées la
+  // nuit, pour que personne ne devine lesquelles il utilise.
+  function appelFictif(step) {
+    const r = ROLE_ETAPE[step.t];
+    if (!r || S.phase !== "nuit" || !S.horsJeu.includes(r)) return null;
+    if (!S.players.some((p) => p.role === "comedien")) return null;
+    const nomR = roleNom(r);
+    const comedienSansAction = S.mem.comedienPouvoir === r;
+    return {
+      titre: nomR + (comedienSansAction ? "" : " (appel fictif)"),
+      dire: reveil(nomR),
+      texte: comedienSansAction
+        ? "Le Comédien a ce pouvoir cette nuit mais n'a rien à faire maintenant. Appelle quand même, attends quelques secondes, puis rendors."
+        : "Cette carte n'est pas en jeu (cartes du Comédien), mais appelle-la quand même : attends quelques secondes comme si elle jouait, puis rendors-la. Ainsi personne ne devine quels rôles le Comédien utilise.",
+      dodo: nomR + ", rendors-toi.",
+      apply() {},
+    };
+  }
+
   function spec(step) {
     if (!step) return null;
     const h = H[step.t];
     if (!h) return null;
-    return h(step);
+    return h(step) || appelFictif(step);
   }
 
   function flushPending() {

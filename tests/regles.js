@@ -325,6 +325,23 @@ Object.assign(tests, {
     jusqua("victoire");
     assert(Engine.spec().texte.includes("Comédien"));
   },
+  "Comédien : les cartes mises de côté sont appelées pour de faux"() {
+    partie(["loup-garou", "comedien", "villageois", "villageois", "villageois"], { horsJeu: ["voyante", "salvateur", "corbeau"] });
+    rep("comedien", "voyante");
+    const sv = jusqua("salvateur");
+    assert(sv.titre.includes("appel fictif"));
+    Engine.repondre(null);
+    const vo = jusqua("voyante");
+    assert(!vo.titre.includes("fictif") && vo.input);
+    assert(jusqua("corbeau").titre.includes("appel fictif"));
+  },
+  "Sans Comédien, pas d'appel fictif"() {
+    partie(["loup-garou", "voleur", "villageois", "villageois", "villageois"], { horsJeu: ["salvateur", "villageois"] });
+    const vues = [];
+    for (let k = 0; k < 20 && etape() !== "loups"; k++) { vues.push(etape()); Engine.repondre(null); }
+    assert.strictEqual(etape(), "loups");
+    assert(!vues.includes("salvateur"), vues.join(","));
+  },
 });
 
 let ok = 0;
