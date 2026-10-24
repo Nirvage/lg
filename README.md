@@ -32,3 +32,11 @@ node tests/simulation.js    # 500 parties aléatoires
 
 Le site est statique : activez GitHub Pages sur la branche principale (dossier racine)
 pour l'utiliser directement depuis un téléphone.
+
+## Hors ligne
+
+Le site est une appli web installable (`manifest.webmanifest` + `sw.js`). Ouvrez-le une
+fois avec du réseau (via GitHub Pages, en HTTPS), puis « Ajouter à l'écran d'accueil » :
+il fonctionne ensuite sans connexion. Les mises à jour sont récupérées en arrière-plan
+et appliquées au lancement suivant. Si vous ajoutez un fichier au site, ajoutez-le aussi
+à la liste `FICHIERS` de `sw.js`.
