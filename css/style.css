@@ -270,3 +270,4 @@ details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .compo-ligne { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--bg2); }
 .compo-ligne:first-of-type { border-top: 0; }
 .compo-ligne .ico { width: 30px; text-align: center; font-size: 22px; }
+.jp .tuer { min-width: 40px; padding: 0 6px; background: transparent; }

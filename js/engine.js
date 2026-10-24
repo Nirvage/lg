@@ -1447,6 +1447,19 @@ const Engine = (() => {
     }),
 
     // Actions du meneur (menu)
+    // Élimination d'un joueur précis par le meneur (bouton ☠️ de la liste).
+    "mort-mj": (s) => {
+      const p = P(s.id);
+      if (!p || !p.alive) return null;
+      return {
+        auto: true,
+        apply() {
+          S.pending.push(info("Élimination", p.nom + " est éliminé par le meneur. C'était : " + roleNom(p.role) + "."));
+          mourir(p.id, "meneur");
+        },
+      };
+    },
+
     "mort-manuelle": () => ({
       titre: "Mort manuelle",
       texte: "Choisissez le joueur à éliminer (Petite Fille surprise, événement, oubli…). Les conséquences (amoureux, Chasseur, Capitaine…) seront appliquées.",

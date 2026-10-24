@@ -393,6 +393,13 @@ Object.assign(tests, {
     rep("cupidon", [3, 4]);
     assert.strictEqual(etape(), "amoureux");
   },
+  "Le meneur élimine un joueur : les conséquences s'appliquent"() {
+    partie(["loup-garou", "chasseur", "villageois", "villageois", "villageois"]);
+    jusqua("loups");
+    Engine.intercaler({ t: "mort-mj", id: 1 });
+    assert(!alive(1));
+    jusqua("chasseur");
+  },
   "Sans Comédien, pas d'appel fictif"() {
     partie(["loup-garou", "voleur", "villageois", "villageois", "villageois"], { horsJeu: ["salvateur", "villageois"] });
     const vues = [];

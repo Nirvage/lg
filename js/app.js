@@ -434,10 +434,11 @@
               <span class="n">${esc(p.nom)}</span>
               <span class="r">${vu ? esc(ROLE_BY_ID[p.role] ? ROLE_BY_ID[p.role].nom : p.role) : "Rôle caché"}${p.metier ? " · " + esc(METIER_BY_ID[p.metier].nom) : ""}${p.alive ? "" : " — " + esc(p.mort.quand)}</span>
               <span class="badges">${badges(p, S, vu)}</span>
+              ${p.alive && S.phase !== "fin" ? `<button class="small tuer" data-a="tuer" data-id="${p.id}" title="Éliminer ce joueur" aria-label="Éliminer ${esc(p.nom)}">☠️</button>` : ""}
               ${p.alive ? `<button class="small jeton ${Engine.peutVoter(p.id) ? "" : "prive"}" data-a="jeton-vote" data-id="${p.id}" title="Peut voter ou non" aria-label="${Engine.peutVoter(p.id) ? "Peut voter" : "Ne peut pas voter"} : ${esc(p.nom)}">${Engine.peutVoter(p.id) ? "🗳️" : "🚫"}</button>` : ""}
             </div>`; }).join("")}
         </div>
-        <p class="muted small">Touchez 🗳️ / 🚫 pour indiquer qui peut voter (Bouc Émissaire, Institutrice…).</p>
+        <p class="muted small">Touchez ☠️ pour éliminer un joueur (les conséquences sont appliquées), 🗳️ / 🚫 pour indiquer qui peut voter (Bouc Émissaire, Institutrice…).</p>
         <p class="muted small">👑 Capitaine · ❤️ Amoureux · 🎶 Charmé · 🛡️ Protégé · 🐺 Devenu loup · 🐦‍⬛ Accusé par le Corbeau · 🛡️🍺 Tavernier immunisé</p>
       </details>
       <details class="panel section" data-k="compo" ${ouvert("compo")}>
@@ -793,6 +794,16 @@
       }
       case "passer": repondre(null); return;
       case "chrono": actionChrono(b.dataset.v); break;
+      case "tuer": {
+        const id = +b.dataset.id;
+        const j = Engine.etat().players.find((x) => x.id === id);
+        dialogue("Éliminer " + j.nom + " ?", { ok: "☠️ Éliminer", danger: true }, () => {
+          Engine.intercaler({ t: "mort-mj", id });
+          sauverPartie();
+          render();
+        });
+        return;
+      }
       case "qr-compo": montrerQrCompo(); return;
       case "voir-roles": rolesReveles = !rolesReveles; break;
       case "jeton-vote":
