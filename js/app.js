@@ -294,6 +294,7 @@
         <h2 style="margin-top:0">Composition</h2>
         <p class="muted small">${nbJoueurs()} joueurs, ${paquet().length} cartes.</p>
         ${resumeCompo(paquet())}
+        <button class="small" data-a="qr-compo" style="margin-top:8px">📱 QR code de la compo</button>
       </div>
       <div class="panel">
         <h2 style="margin-top:0">Qui a quel rôle ?</h2>
@@ -438,6 +439,7 @@
       <details class="panel section" data-k="compo" ${ouvert("compo")}>
         <summary>Composition</summary>
         <div style="margin-top:8px">${resumeCompo(S.players.map((p) => p.roleInitial), S.horsJeu)}</div>
+        <button class="small" data-a="qr-compo" style="margin-top:8px">📱 QR code de la compo</button>
       </details>
       <details class="panel section" data-k="outils" ${ouvert("outils")}>
         <summary>Outils du meneur</summary>
@@ -624,6 +626,27 @@
     if (champ) champ.addEventListener("keydown", (e) => { if (e.key === "Enter") fermer(true); });
   }
 
+  // QR code que les joueurs scannent pour voir la liste des rôles (sans les noms).
+  function montrerQrCompo() {
+    const S = vue === "partie" && Engine.etat();
+    const cartes = S ? S.players.map((p) => p.roleInitial).concat(S.horsJeuInitial || S.horsJeu) : paquet();
+    const metiers = S ? S.players.map((p) => p.metier).filter(Boolean) : paquetMetiers();
+    const lien = lienCompo(cartes, metiers);
+    const fond = document.createElement("div");
+    fond.className = "modal-fond";
+    fond.innerHTML = `<div class="modal qr-modal">
+      <p><strong>Composition de la partie</strong></p>
+      <div class="qr">${qrSvg(lien)}</div>
+      <p class="muted small">Les joueurs scannent ce code pour voir la liste des rôles (sans savoir qui a quoi).</p>
+      <a class="small qr-lien" href="${esc(lien)}" target="_blank" rel="noopener">${esc(lien)}</a>
+      <div class="actions"><button class="primary" data-d="ok">Fermer</button></div>
+    </div>`;
+    document.body.appendChild(fond);
+    fond.addEventListener("click", (e) => {
+      if (e.target === fond || e.target.closest("[data-d]")) fond.remove();
+    });
+  }
+
   function demarrer() {
     rolesReveles = false;
     const setup = {
@@ -764,6 +787,7 @@
       }
       case "passer": repondre(null); return;
       case "chrono": actionChrono(b.dataset.v); break;
+      case "qr-compo": montrerQrCompo(); return;
       case "voir-roles": rolesReveles = !rolesReveles; break;
       case "jeton-vote":
         Engine.basculerVote(+b.dataset.id);

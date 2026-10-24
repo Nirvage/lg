@@ -261,3 +261,12 @@ details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .chrono-boutons button { min-width: 44px; white-space: nowrap; }
 .chrono-boutons button.actif { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .jp .ico.cache { opacity: .6; font-size: 20px; }
+
+/* QR code de la composition */
+.qr-modal { text-align: center; }
+.qr { background: #fff; border-radius: 8px; padding: 6px; margin: 8px auto; max-width: 280px; }
+.qr svg { display: block; width: 100%; height: auto; }
+.qr-lien { display: block; word-break: break-all; color: var(--muted); margin-bottom: 8px; }
+.compo-ligne { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--bg2); }
+.compo-ligne:first-of-type { border-top: 0; }
+.compo-ligne .ico { width: 30px; text-align: center; font-size: 22px; }

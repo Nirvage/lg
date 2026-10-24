@@ -34,6 +34,7 @@ const Engine = (() => {
       },
       players,
       horsJeu: setup.horsJeu.slice(),
+      horsJeuInitial: setup.horsJeu.slice(),
       nuit: 0,
       jour: 0,
       phase: "debut",

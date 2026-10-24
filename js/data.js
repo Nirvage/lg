@@ -316,3 +316,43 @@ if (typeof document !== "undefined") {
     }
   }, true);
 }
+
+// ---------- Partage de la composition (QR code) ----------
+
+// Adresse publique du site (GitHub Pages), utilisée quand l'appli tourne
+// ailleurs (ex. aperçu) pour que le QR code mène quand même à la page.
+const URL_SITE = "https://nirvage.github.io/lg/";
+
+// cartes / metiers : listes d'ids (avec répétitions).
+function lienCompo(cartes, metiers) {
+  const compter = (l) => {
+    const n = {};
+    l.forEach((id) => { n[id] = (n[id] || 0) + 1; });
+    // Ordre fixe (celui des cartes) : l'ordre des joueurs ne doit rien révéler.
+    const rang = (id) => { const i = ROLES.findIndex((r) => r.id === id); return i < 0 ? 999 + METIERS.findIndex((m) => m.id === id) : i; };
+    return Object.entries(n).sort(([x], [y]) => rang(x) - rang(y)).map(([id, k]) => (k > 1 ? id + "*" + k : id)).join(",");
+  };
+  const local = /^https?:$/.test(location.protocol) && !/claude|anthropic|usercontent/.test(location.hostname);
+  const base = local ? new URL("compo.html", location.href).href : URL_SITE + "compo.html";
+  return base + "#r=" + compter(cartes) + (metiers && metiers.length ? "&m=" + compter(metiers) : "");
+}
+
+function lireCompo(hash) {
+  const params = new URLSearchParams(hash.replace(/^#/, ""));
+  const lire = (s) => (s || "").split(",").filter(Boolean).map((x) => {
+    const [id, k] = x.split("*");
+    return { id, n: +k || 1 };
+  });
+  return {
+    roles: lire(params.get("r")).filter((x) => ROLE_BY_ID[x.id]),
+    metiers: lire(params.get("m")).filter((x) => METIER_BY_ID[x.id]),
+  };
+}
+
+// QR code en SVG (bibliothèque qrcode-generator).
+function qrSvg(texte) {
+  const qr = qrcode(0, "M");
+  qr.addData(texte);
+  qr.make();
+  return qr.createSvgTag({ cellSize: 6, margin: 4, scalable: true });
+}
