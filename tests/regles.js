@@ -294,6 +294,11 @@ Object.assign(tests, {
     rep("loups", [1]);
     jusqua("chasseur");
   },
+  "Le Comédien se réveille en premier, avant Cupidon"() {
+    partie(["loup-garou", "comedien", "cupidon", "voleur", "villageois"], { horsJeu: ["voyante", "villageois", "chasseur"] });
+    jusqua("comedien");
+    assert(!S().history.some((h) => h.current && ["voleur", "cupidon"].includes(h.current.t)));
+  },
 });
 
 let ok = 0;

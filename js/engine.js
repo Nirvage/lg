@@ -313,13 +313,14 @@ const Engine = (() => {
 
   function etapesNuit() {
     const n1 = S.nuit === 1;
-    const e = [{ t: "dormir" }];
+    // Le Comédien se réveille en premier pour choisir son pouvoir de la nuit.
+    const e = [{ t: "dormir" }, { t: "comedien" }];
     if (n1) {
       e.push({ t: "voleur" }, { t: "cupidon" }, { t: "amoureux" }, { t: "enfant" }, { t: "chienloup" },
         { t: "sectaire" }, { t: "juge-signe" });
     }
     e.push({ t: "fratrie", role: "deux-soeurs" }, { t: "fratrie", role: "trois-freres" });
-    e.push({ t: "comedien" }, { t: "salvateur" }, { t: "voyante" }, { t: "renard" }, { t: "gitane" });
+    e.push({ t: "salvateur" }, { t: "voyante" }, { t: "renard" }, { t: "gitane" });
     e.push({ t: "loups" }, { t: "infect" }, { t: "gml" }, { t: "loup-blanc" }, { t: "boulanger" });
     e.push({ t: "sorciere-vie" }, { t: "sorciere-mort" });
     e.push({ t: "flute" }, { t: "charmes" }, { t: "pyromane" }, { t: "corbeau" });
