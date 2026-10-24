@@ -331,6 +331,7 @@ const IMAGES_CARTES = new Set([
   "sorciere",
   "trois-freres",
   "villageois",
+  "villageois-villageois",
   "voleur",
   "voyante",
 ]);

@@ -1,7 +1,7 @@
 // Service worker : rend l'appli utilisable hors ligne.
 // Les fichiers sont servis depuis le cache puis mis à jour en arrière-plan,
 // donc une nouvelle version est prise en compte au lancement suivant.
-const CACHE = "lg-mj-v4";
+const CACHE = "lg-mj-v5";
 const FICHIERS = [
   "./",
   "index.html",
@@ -46,6 +46,7 @@ const FICHIERS = [
   "img/cartes/sorciere.jpg",
   "img/cartes/trois-freres.jpg",
   "img/cartes/villageois.jpg",
+  "img/cartes/villageois-villageois.jpg",
   "img/cartes/voleur.jpg",
   "img/cartes/voyante.jpg",
 ];
