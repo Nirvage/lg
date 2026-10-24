@@ -1,42 +1,43 @@
 # Images des cartes
 
 Déposez ici les images de vos cartes (par exemple des photos ou scans de vos
-cartes officielles) au format PNG, avec exactement ces noms de fichier.
+cartes officielles) au format JPEG (carré, ~360 px), avec exactement ces noms de fichier, puis ajoutez
+l'identifiant à `IMAGES_CARTES` dans `js/data.js` et le fichier à `FICHIERS` dans `sw.js`.
 Une carte sans image garde son icône.
 
 | Fichier | Carte |
 |---|---|
-| `loup-garou.png` | Loup-Garou |
-| `villageois.png` | Simple Villageois |
-| `voyante.png` | Voyante |
-| `sorciere.png` | Sorcière |
-| `chasseur.png` | Chasseur |
-| `cupidon.png` | Cupidon |
-| `petite-fille.png` | Petite Fille |
-| `voleur.png` | Voleur |
-| `capitaine.png` | Capitaine |
-| `ancien.png` | Ancien |
-| `bouc-emissaire.png` | Bouc Émissaire |
-| `idiot.png` | Idiot du Village |
-| `joueur-de-flute.png` | Joueur de Flûte |
-| `salvateur.png` | Salvateur |
-| `evenements.png` | Cartes Événement |
-| `corbeau.png` | Corbeau |
-| `pyromane.png` | Pyromane |
-| `loup-blanc.png` | Loup-Garou Blanc |
-| `abominable-sectaire.png` | Abominable Sectaire |
-| `ange.png` | Ange |
-| `chevalier.png` | Chevalier à l'Épée Rouillée |
-| `chien-loup.png` | Chien-Loup |
-| `comedien.png` | Comédien |
-| `deux-soeurs.png` | Deux Sœurs |
-| `trois-freres.png` | Trois Frères |
-| `enfant-sauvage.png` | Enfant Sauvage |
-| `grand-mechant-loup.png` | Grand Méchant Loup |
-| `infect.png` | Infect Père des Loups |
-| `juge-begue.png` | Juge Bègue |
-| `montreur-ours.png` | Montreur d'Ours |
-| `renard.png` | Renard |
-| `servante.png` | Servante Dévouée |
-| `villageois-villageois.png` | Villageois-Villageois |
-| `gitane.png` | Gitane |
+| `loup-garou.jpg` | Loup-Garou |
+| `villageois.jpg` | Simple Villageois |
+| `voyante.jpg` | Voyante |
+| `sorciere.jpg` | Sorcière |
+| `chasseur.jpg` | Chasseur |
+| `cupidon.jpg` | Cupidon |
+| `petite-fille.jpg` | Petite Fille |
+| `voleur.jpg` | Voleur |
+| `capitaine.jpg` | Capitaine |
+| `ancien.jpg` | Ancien |
+| `bouc-emissaire.jpg` | Bouc Émissaire |
+| `idiot.jpg` | Idiot du Village |
+| `joueur-de-flute.jpg` | Joueur de Flûte |
+| `salvateur.jpg` | Salvateur |
+| `evenements.jpg` | Cartes Événement |
+| `corbeau.jpg` | Corbeau |
+| `pyromane.jpg` | Pyromane |
+| `loup-blanc.jpg` | Loup-Garou Blanc |
+| `abominable-sectaire.jpg` | Abominable Sectaire |
+| `ange.jpg` | Ange |
+| `chevalier.jpg` | Chevalier à l'Épée Rouillée |
+| `chien-loup.jpg` | Chien-Loup |
+| `comedien.jpg` | Comédien |
+| `deux-soeurs.jpg` | Deux Sœurs |
+| `trois-freres.jpg` | Trois Frères |
+| `enfant-sauvage.jpg` | Enfant Sauvage |
+| `grand-mechant-loup.jpg` | Grand Méchant Loup |
+| `infect.jpg` | Infect Père des Loups |
+| `juge-begue.jpg` | Juge Bègue |
+| `montreur-ours.jpg` | Montreur d'Ours |
+| `renard.jpg` | Renard |
+| `servante.jpg` | Servante Dévouée |
+| `villageois-villageois.jpg` | Villageois-Villageois |
+| `gitane.jpg` | Gitane |

@@ -300,12 +300,47 @@ function enregistrerPhoto(id, dataUrl) {
   }
 }
 const IMAGES_ABSENTES = new Set();
+// Cartes dont une image est fournie dans img/cartes/<id>.jpg.
+const IMAGES_CARTES = new Set([
+  "abominable-sectaire",
+  "ancien",
+  "ange",
+  "bouc-emissaire",
+  "chasseur",
+  "chevalier",
+  "chien-loup",
+  "comedien",
+  "corbeau",
+  "cupidon",
+  "deux-soeurs",
+  "enfant-sauvage",
+  "gitane",
+  "grand-mechant-loup",
+  "idiot",
+  "infect",
+  "joueur-de-flute",
+  "juge-begue",
+  "loup-blanc",
+  "loup-garou",
+  "montreur-ours",
+  "petite-fille",
+  "pyromane",
+  "renard",
+  "salvateur",
+  "servante",
+  "sorciere",
+  "trois-freres",
+  "villageois",
+  "voleur",
+  "voyante",
+]);
+
 function visuelCarte(id, classe) {
   const r = ROLE_BY_ID[id];
   const icone = r ? r.icone : "?";
   if (PHOTOS[id]) return `<span class="visuel photo ${classe || ""}"><img src="${PHOTOS[id]}" alt="${r ? r.nom : ""}"></span>`;
-  if (IMAGES_ABSENTES.has(id)) return `<span class="visuel sans-image ${classe || ""}"><span class="repli">${icone}</span></span>`;
-  return `<span class="visuel ${classe || ""}"><img src="img/cartes/${id}.png" alt="" data-carte="${id}"><span class="repli">${icone}</span></span>`;
+  if (IMAGES_ABSENTES.has(id) || !IMAGES_CARTES.has(id)) return `<span class="visuel sans-image ${classe || ""}"><span class="repli">${icone}</span></span>`;
+  return `<span class="visuel ${classe || ""}"><img src="img/cartes/${id}.jpg" alt="" data-carte="${id}"><span class="repli">${icone}</span></span>`;
 }
 if (typeof document !== "undefined") {
   document.addEventListener("error", (e) => {

@@ -1,7 +1,7 @@
 // Service worker : rend l'appli utilisable hors ligne.
 // Les fichiers sont servis depuis le cache puis mis à jour en arrière-plan,
 // donc une nouvelle version est prise en compte au lancement suivant.
-const CACHE = "lg-mj-v2";
+const CACHE = "lg-mj-v3";
 const FICHIERS = [
   "./",
   "index.html",
@@ -17,6 +17,37 @@ const FICHIERS = [
   "manifest.webmanifest",
   "img/icones/icone-192.png",
   "img/icones/icone-512.png",
+  "img/cartes/abominable-sectaire.jpg",
+  "img/cartes/ancien.jpg",
+  "img/cartes/ange.jpg",
+  "img/cartes/bouc-emissaire.jpg",
+  "img/cartes/chasseur.jpg",
+  "img/cartes/chevalier.jpg",
+  "img/cartes/chien-loup.jpg",
+  "img/cartes/comedien.jpg",
+  "img/cartes/corbeau.jpg",
+  "img/cartes/cupidon.jpg",
+  "img/cartes/deux-soeurs.jpg",
+  "img/cartes/enfant-sauvage.jpg",
+  "img/cartes/gitane.jpg",
+  "img/cartes/grand-mechant-loup.jpg",
+  "img/cartes/idiot.jpg",
+  "img/cartes/infect.jpg",
+  "img/cartes/joueur-de-flute.jpg",
+  "img/cartes/juge-begue.jpg",
+  "img/cartes/loup-blanc.jpg",
+  "img/cartes/loup-garou.jpg",
+  "img/cartes/montreur-ours.jpg",
+  "img/cartes/petite-fille.jpg",
+  "img/cartes/pyromane.jpg",
+  "img/cartes/renard.jpg",
+  "img/cartes/salvateur.jpg",
+  "img/cartes/servante.jpg",
+  "img/cartes/sorciere.jpg",
+  "img/cartes/trois-freres.jpg",
+  "img/cartes/villageois.jpg",
+  "img/cartes/voleur.jpg",
+  "img/cartes/voyante.jpg",
 ];
 
 self.addEventListener("install", (e) => {
