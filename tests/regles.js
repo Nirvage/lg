@@ -18,6 +18,7 @@ function partie(roles, opts = {}) {
     votesDetailles: !!opts.votesDetailles,
     voteConfiance: !!opts.voteConfiance,
     pesteNoire: !!opts.pesteNoire,
+    voleurVole: !!opts.voleurVole,
     joueurs: roles.map((r, i) => ({ nom: "J" + i, role: r, metier: (opts.metiers || [])[i] || null })),
     horsJeu: opts.horsJeu || [],
   });
@@ -357,6 +358,17 @@ Object.assign(tests, {
     rep("loups", [3]);
     jusqua("vote");
     assert.strictEqual(S().players[1].camp, "loups");
+  },
+  "Voleur variante : vole la carte d'un loup, la victime devient Voleur"() {
+    partie(["voleur", "loup-garou", "villageois", "villageois", "villageois"], { voleurVole: true });
+    rep("voleur", [1]);
+    assert.strictEqual(S().players[0].role, "loup-garou");
+    assert.strictEqual(S().players[0].camp, "loups");
+    assert.strictEqual(S().players[1].role, "voleur");
+    assert.strictEqual(S().players[1].camp, "village");
+    assert(Engine.spec().titre.includes("volée"));
+    const loups = jusqua("loups");
+    assert(!loups.input.candidats.includes(0));
   },
   "Sans Comédien, pas d'appel fictif"() {
     partie(["loup-garou", "voleur", "villageois", "villageois", "villageois"], { horsJeu: ["salvateur", "villageois"] });

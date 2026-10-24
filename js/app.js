@@ -29,6 +29,7 @@
       votesDetailles: false,
       voteConfiance: false,
       pesteNoire: false,
+      voleurVole: false,
       distribution: [],
     },
     lire(CLE_CONFIG) || {}
@@ -59,7 +60,7 @@
 
   function cartesSupplementaires() {
     let n = 0;
-    if (config.compo.voleur && config.extensions.base) n += 2;
+    if (config.compo.voleur && config.extensions.base && !config.voleurVole) n += 2;
     if (config.compo.comedien && config.extensions.personnages) n += 3;
     return n;
   }
@@ -226,6 +227,7 @@
         <label class="check"><input type="checkbox" data-opt="votesDetailles" ${config.votesDetailles ? "checked" : ""}> Noter le vote de chaque joueur (l'appli fait le décompte)</label>
         <label class="check"><input type="checkbox" data-opt="voteConfiance" ${config.voteConfiance ? "checked" : ""}> Proposer le vote de confiance (à chaque vote, vous choisissez : classique ou confiance)</label>
         <label class="check"><input type="checkbox" data-opt="pesteNoire" ${config.pesteNoire ? "checked" : ""}> Peste noire possible (la compo peut n'avoir aucun loup ; le village peut voter « la peste »)</label>
+        <label class="check"><input type="checkbox" data-opt="voleurVole" ${config.voleurVole ? "checked" : ""}> Variante du Voleur : il vole la carte d'un joueur la première nuit, et ce joueur devient le Voleur (pas de cartes en plus)</label>
         <div class="row" style="margin-top:8px">
           <button data-a="compo-rapide">⚡ Compo suggérée</button>
           <button class="ghost" data-a="compo-vide">Tout remettre à zéro</button>
@@ -655,6 +657,7 @@
       votesDetailles: config.votesDetailles,
       voteConfiance: config.voteConfiance,
       pesteNoire: config.pesteNoire,
+      voleurVole: config.voleurVole,
       joueurs: config.joueurs.map((n, i) => ({
         nom: n.trim() || "Joueur " + (i + 1),
         role: config.distribution[i].role,

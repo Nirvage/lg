@@ -31,6 +31,7 @@ const Engine = (() => {
         votesDetailles: !!setup.votesDetailles,
         voteConfiance: !!setup.voteConfiance,
         pesteNoire: !!setup.pesteNoire,
+        voleurVole: !!setup.voleurVole,
       },
       players,
       horsJeu: setup.horsJeu.slice(),
@@ -379,6 +380,29 @@ const Engine = (() => {
   const ids = (arr) => arr.map((p) => p.id);
   const reveil = (roleNomTxt) => roleNomTxt + ", réveille-toi.";
 
+  // Variante : le Voleur prend la carte d'un joueur, qui devient le Voleur (sans pouvoir).
+  function voleurVariante(p) {
+    return {
+      titre: "Le Voleur",
+      dire: reveil("Voleur") + " Désigne le joueur dont tu veux voler la carte.",
+      texte: "Voleur : " + p.nom + ". Il peut aussi ne rien voler (bouton Passer). Montrez-lui la carte volée : c'est désormais son rôle.",
+      input: choixJoueurs(ids(vivants().filter((x) => x.id !== p.id))),
+      skip: true,
+      apply(a) {
+        if (!a || !a.length) { log(p.nom + " (Voleur) ne vole rien.", true); return; }
+        const v = P(a[0]);
+        const vole = v.role;
+        p.role = vole;
+        p.camp = v.camp;
+        v.role = "voleur";
+        v.camp = "village";
+        log(p.nom + " (Voleur) vole la carte de " + v.nom + " et devient " + roleNom(vole) + ". " + v.nom + " devient le Voleur.", true);
+        S.queue.unshift(info("Carte volée", "Le Voleur est rendormi. Touchez " + v.nom + " : sa carte (" + roleNom(vole) + ") a été volée, il ou elle est désormais le Voleur, sans pouvoir, dans le camp du village. Montrez-lui la carte du Voleur.", { secret: true }));
+      },
+      dodo: "Voleur, rendors-toi.",
+    };
+  }
+
   const H = {
     info: (s) => ({
       titre: s.titre,
@@ -423,6 +447,7 @@ const Engine = (() => {
 
     voleur: () => {
       const p = acteur("voleur");
+      if (p && S.config.voleurVole) return voleurVariante(p);
       if (!p || S.horsJeu.length === 0) return null;
       const cartes = S.horsJeu.map((r, i) => ({ v: i, label: "Prendre : " + roleNom(r) }));
       const deuxLoups = S.horsJeu.length >= 2 && S.horsJeu.every((r) => campDeRole(r) === "loups");
