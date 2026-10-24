@@ -25,6 +25,8 @@
       metiers: {},
       extensions: { base: true, "nouvelle-lune": true, village: true, personnages: true },
       capitaine: true,
+      loupsEntreDevorer: false,
+      votesDetailles: false,
       distribution: [],
     },
     lire(CLE_CONFIG) || {}
@@ -215,7 +217,10 @@
         <h2 style="margin-top:0">Extensions</h2>
         ${Object.entries(EXTENSIONS).map(([id, e]) => `
           <label class="check"><input type="checkbox" data-ext="${id}" ${config.extensions[id] ? "checked" : ""}> ${esc(e.nom)}</label>`).join("")}
-        <label class="check"><input type="checkbox" data-a="capitaine" ${config.capitaine ? "checked" : ""}> Élire un Capitaine le premier jour</label>
+        <h2>Options</h2>
+        <label class="check"><input type="checkbox" data-opt="capitaine" ${config.capitaine ? "checked" : ""}> Élire un Capitaine le premier jour</label>
+        <label class="check"><input type="checkbox" data-opt="loupsEntreDevorer" ${config.loupsEntreDevorer ? "checked" : ""}> Les loups peuvent se dévorer entre eux</label>
+        <label class="check"><input type="checkbox" data-opt="votesDetailles" ${config.votesDetailles ? "checked" : ""}> Noter le vote de chaque joueur (l'appli fait le décompte)</label>
         <div class="row" style="margin-top:8px">
           <button data-a="compo-rapide">⚡ Compo suggérée</button>
           <button class="ghost" data-a="compo-vide">Tout remettre à zéro</button>
@@ -308,6 +313,7 @@
     if (p.camp === "loups" && ROLE_BY_ID[p.role] && ROLE_BY_ID[p.role].camp !== "loups") b.push("🐺");
     if (p.metier) b.push(METIER_BY_ID[p.metier].icone);
     if (S.mem.corbeau === p.id) b.push("🐦‍⬛");
+    if (p.metier === "tavernier" && S.mem.tavernierImmun) b.push("🛡️🍺");
     return b.join(" ");
   }
 
@@ -343,12 +349,22 @@
         saisie = `<div class="choix-options">${inp.options.map((o) => `<button data-a="opt" data-v="${esc(o.v)}" class="${o.primary ? "primary" : ""}">${esc(o.label)}</button>`).join("")}</div>`;
       } else if (inp && inp.kind === "text") {
         saisie = `<input type="text" id="saisie-texte" placeholder="${esc(inp.placeholder || "")}">`;
+      } else if (inp && inp.kind === "votes") {
+        const cibles = S.players.filter((p) => inp.candidats.includes(p.id));
+        saisie = `<p class="muted small">Pour chaque votant, choisissez contre qui il vote. Le Capitaine compte double et les 2 voix du Corbeau sont ajoutées automatiquement.</p>
+          <div class="votes">${S.players.filter((p) => inp.votants.includes(p.id)).map((p) => `
+            <label class="vote-ligne"><span>${esc(p.nom)}${S.mem.capitaine === p.id ? " 👑" : ""}</span>
+              <select data-vote="${p.id}" aria-label="Vote de ${esc(p.nom)}">
+                <option value="">— abstention —</option>
+                ${cibles.filter((c) => c.id !== p.id).map((c) => `<option value="${c.id}">${esc(c.nom)}</option>`).join("")}
+              </select>
+            </label>`).join("")}</div>`;
       }
       const boutonValider = sp.fin
         ? `<button class="primary" data-a="nouvelle">🔁 Nouvelle partie</button>`
         : inp && inp.kind === "choice"
           ? ""
-          : `<button class="primary" data-a="valider" ${peutValider ? "" : "disabled"}>${inp && inp.kind === "players" ? "Valider" : "Continuer"} →</button>`;
+          : `<button class="primary" data-a="valider" ${peutValider ? "" : "disabled"}>${inp && inp.kind === "players" ? "Valider" : inp && inp.kind === "votes" ? "Valider le vote" : "Continuer"} →</button>`;
       corps = `
         <div class="etape ${nuit ? "nuit" : ""}">
           <h2>${esc(sp.titre || "")}</h2>
@@ -382,9 +398,11 @@
               <span class="n">${esc(p.nom)}</span>
               <span class="r">${esc(ROLE_BY_ID[p.role] ? ROLE_BY_ID[p.role].nom : p.role)}${p.metier ? " · " + esc(METIER_BY_ID[p.metier].nom) : ""}${p.alive ? "" : " — " + esc(p.mort.quand)}</span>
               <span class="badges">${badges(p, S)}</span>
+              ${p.alive ? `<button class="small jeton ${Engine.peutVoter(p.id) ? "" : "prive"}" data-a="jeton-vote" data-id="${p.id}" title="Peut voter ou non" aria-label="${Engine.peutVoter(p.id) ? "Peut voter" : "Ne peut pas voter"} : ${esc(p.nom)}">${Engine.peutVoter(p.id) ? "🗳️" : "🚫"}</button>` : ""}
             </div>`).join("")}
         </div>
-        <p class="muted small">👑 Capitaine · ❤️ Amoureux · 🎶 Charmé · 🛡️ Protégé · 🐺 Devenu loup · 🐦‍⬛ Accusé par le Corbeau</p>
+        <p class="muted small">Touchez 🗳️ / 🚫 pour indiquer qui peut voter (Bouc Émissaire, Institutrice…).</p>
+        <p class="muted small">👑 Capitaine · ❤️ Amoureux · 🎶 Charmé · 🛡️ Protégé · 🐺 Devenu loup · 🐦‍⬛ Accusé par le Corbeau · 🛡️🍺 Tavernier immunisé</p>
       </details>
       <details class="panel section" data-k="outils" ${ouvert("outils")}>
         <summary>Outils du meneur</summary>
@@ -488,6 +506,8 @@
   function demarrer() {
     const setup = {
       capitaine: config.capitaine,
+      loupsEntreDevorer: config.loupsEntreDevorer,
+      votesDetailles: config.votesDetailles,
       joueurs: config.joueurs.map((n, i) => ({
         nom: n.trim() || "Joueur " + (i + 1),
         role: config.distribution[i].role,
@@ -522,8 +542,8 @@
       config.extensions[t.dataset.ext] = t.checked;
       sauverConfig();
       render();
-    } else if (t.dataset.a === "capitaine") {
-      config.capitaine = t.checked;
+    } else if (t.dataset.opt) {
+      config[t.dataset.opt] = t.checked;
       sauverConfig();
     } else if (t.dataset.distribRole !== undefined) {
       config.distribution[+t.dataset.distribRole].role = t.value;
@@ -610,10 +630,19 @@
         const sp = Engine.spec();
         if (sp.input && sp.input.kind === "players") repondre(selection.slice());
         else if (sp.input && sp.input.kind === "text") repondre(document.getElementById("saisie-texte").value.trim());
+        else if (sp.input && sp.input.kind === "votes") {
+          const votes = {};
+          app.querySelectorAll("[data-vote]").forEach((el) => { votes[el.dataset.vote] = el.value === "" ? "" : +el.value; });
+          repondre(votes);
+        }
         else repondre(null);
         return;
       }
       case "passer": repondre(null); return;
+      case "jeton-vote":
+        Engine.basculerVote(+b.dataset.id);
+        sauverPartie();
+        break;
       case "annuler":
         Engine.annuler();
         sauverPartie();

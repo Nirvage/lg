@@ -233,3 +233,9 @@ details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .choix-joueurs button { flex-direction: row; align-items: center; gap: 8px; }
 .choix-joueurs button .txt { display: flex; flex-direction: column; min-width: 0; }
 .visuel.revele { width: 160px; font-size: 64px; }
+
+/* Votes détaillés et jetons de vote */
+.votes { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.vote-ligne { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; align-items: center; }
+.jp .jeton { min-width: 40px; padding: 0 6px; }
+.jp .jeton.prive { border-color: var(--danger); background: transparent; }

@@ -28,6 +28,8 @@ function partie() {
   const metiers = Math.random() < 0.4 ? shuffle(METIERS.map((m) => m.id)) : [];
   const setup = {
     capitaine: Math.random() < 0.7,
+    loupsEntreDevorer: Math.random() < 0.5,
+    votesDetailles: Math.random() < 0.5,
     joueurs: Array.from({ length: n }, (_, i) => ({ nom: "J" + i, role: cartes[i], metier: metiers.length ? metiers[i] || "vagabond" : null })),
     horsJeu: cartes.slice(n, n + 3),
   };
@@ -56,6 +58,10 @@ function partie() {
     } else if (inp.kind === "choice") {
       rep = S.current.t === "victoire" ? (Math.random() < 0.9 ? "fin" : "continuer") : pick(inp.options).v;
     } else if (inp.kind === "text") rep = "note";
+    else if (inp.kind === "votes") {
+      rep = {};
+      inp.votants.forEach((id) => { rep[id] = Math.random() < 0.1 ? "" : pick(inp.candidats); });
+    }
     Engine.repondre(rep);
     JSON.stringify(Engine.etat());
   }

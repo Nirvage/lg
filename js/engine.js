@@ -25,7 +25,11 @@ const Engine = (() => {
     const presents = new Set(players.map((p) => p.role));
     S = {
       version: 1,
-      config: { capitaine: !!setup.capitaine },
+      config: {
+        capitaine: !!setup.capitaine,
+        loupsEntreDevorer: !!setup.loupsEntreDevorer,
+        votesDetailles: !!setup.votesDetailles,
+      },
       players,
       horsJeu: setup.horsJeu.slice(),
       nuit: 0,
@@ -68,6 +72,7 @@ const Engine = (() => {
         chatelainUtilise: false,
         boucInterdits: null,
         victoireIgnoree: null,
+        privesDeVote: [],
       },
       log: [],
       history: [],
@@ -181,6 +186,7 @@ const Engine = (() => {
     if (!p || !p.alive) return;
     p.alive = false;
     p.mort = { cause, quand: phaseLabel() };
+    if (S.mortsGroupes) S.mortsGroupes.push({ id, cause, amoureuxDe: cause === "chagrin" ? S.amoureuxDe : null });
     log(p.nom + " (" + roleNom(p.role) + ") : " + (CAUSES[cause] || cause) + ".");
 
     if (estLoup(p)) S.mem.loupMort = true;
@@ -234,7 +240,8 @@ const Engine = (() => {
     if (S.mem.couple && S.mem.couple.includes(p.id)) {
       const autre = S.mem.couple.find((x) => x !== p.id);
       if (P(autre) && P(autre).alive) {
-        S.pending.push(info("Mort de chagrin", nom(autre) + " était amoureux de " + p.nom + " et meurt de chagrin. C'était : " + roleNom(P(autre).role) + "."));
+        if (!S.mortsGroupes) S.pending.push(info("Mort de chagrin", nom(autre) + " était amoureux de " + p.nom + " et meurt de chagrin. C'était : " + roleNom(P(autre).role) + "."));
+        S.amoureuxDe = p.id;
         mourir(autre, "chagrin");
       }
     }
@@ -267,8 +274,32 @@ const Engine = (() => {
     if (loups.length === 0) return { camp: "village", texte: "Il n'y a plus aucun Loup-Garou : le village gagne !" };
     const nonLoups = v.filter((p) => !estLoup(p));
     if (nonLoups.length === 0 && !blanc) return { camp: "loups", texte: "Il ne reste que des Loups-Garous : les loups gagnent !" };
+    // Autant de loups que de villageois : les loups gagnent, sauf si un
+    // villageois a encore un pouvoir capable de renverser la partie.
+    const coupleMixte = couple && couple.every((id) => P(id).alive) && estLoup(P(couple[0])) !== estLoup(P(couple[1]));
+    if (!blanc && !coupleMixte && loups.length >= nonLoups.length) {
+      const speciaux = nonLoups.filter(roleActif);
+      if (speciaux.length === 0) return { camp: "loups", texte: "Il y a autant de Loups-Garous que de villageois et aucun rôle spécial ne peut plus les arrêter : les loups gagnent !" };
+    }
     return null;
   }
+
+  // Un villageois dont le rôle peut encore changer l'issue de la partie.
+  function roleActif(p) {
+    if (!pouvoirOK(p)) return false;
+    if (["villageois", "villageois-villageois", "cupidon", "voleur", "petite-fille", "servante"].includes(p.role)) return false;
+    if (p.role === "sorciere" && !S.mem.potionVie && !S.mem.potionMort) return false;
+    if (p.role === "idiot" && S.mem.idiotRevele) return false;
+    if (p.role === "renard" && !S.mem.renardActif) return false;
+    return true;
+  }
+
+  const cleVictoire = (v) => v.camp + ":" + vivants().map((p) => p.id).join(",");
+  // Vrai si une victoire est atteinte et que le meneur ne l'a pas écartée.
+  const partieGagnee = () => {
+    const v = victoire();
+    return !!v && S.mem.victoireIgnoree !== cleVictoire(v);
+  };
 
   // ---------- Construction des phases ----------
 
@@ -561,17 +592,20 @@ const Engine = (() => {
 
     loups: () => {
       const loups = vivants().filter(estLoup);
-      if (loups.length === 0) return null;
+      const cibles = S.config.loupsEntreDevorer ? vivants() : vivants().filter((x) => !estLoup(x));
+      if (loups.length === 0 || cibles.length === 0) return null;
       const notes = ["Loups : " + listeFr(loups.map((l) => l.nom + (l.role !== "loup-garou" ? " (" + roleNom(l.role) + ")" : "")))];
+      const tav = avecMetier("tavernier")[0];
+      if (tav && S.mem.tavernierImmun) notes.push("🍺 " + tav.nom + " est le Tavernier : s'il est désigné, il ne mourra pas.");
+      if (!S.config.loupsEntreDevorer) notes.push("Les loups ne peuvent pas se dévorer entre eux.");
       if (avecRole("petite-fille").some(pouvoirOK)) notes.push("La Petite Fille (" + avecRole("petite-fille").map((x) => x.nom).join(", ") + ") peut espionner : si les loups la surprennent, elle meurt (utilisez « Mort manuelle » dans le menu).");
       return {
         titre: "Les Loups-Garous",
         dire: "Les Loups-Garous, réveillez-vous, reconnaissez-vous et désignez votre victime.",
         texte: notes.join(" "),
-        input: choixJoueurs(ids(vivants())),
-        skip: true,
+        input: choixJoueurs(ids(cibles)),
         apply(a) {
-          S.night.victimeLoups = a ? a[0] : null;
+          S.night.victimeLoups = a && a.length ? a[0] : null;
           if (a) log("Les loups attaquent " + nom(a[0]) + ".", true);
         },
         dodo: "Les Loups-Garous, rendormez-vous.",
@@ -755,8 +789,8 @@ const Engine = (() => {
       return {
         titre: "Le Corbeau",
         dire: reveil("Corbeau") + " Désigne un joueur qui aura deux voix de plus contre lui demain.",
-        texte: "Corbeau : " + p.nom + ".",
-        input: choixJoueurs(ids(vivants())),
+        texte: "Corbeau : " + p.nom + "." + (avecMetier("vagabond").length ? " Il ne peut pas désigner un Vagabond." : ""),
+        input: choixJoueurs(ids(vivants().filter((x) => x.metier !== "vagabond"))),
         skip: true,
         apply(a) {
           S.mem.corbeau = a ? a[0] : null;
@@ -804,11 +838,15 @@ const Engine = (() => {
         }
 
         S.queue.unshift({ t: "jour" });
-        const texte = morts.length
-          ? "Annoncez : " + morts.map((m) => nom(m.id) + " (" + roleNom(P(m.id).role) + ", " + (CAUSES[m.cause] || m.cause) + ")").join(" ; ") + "."
-          : "Personne n'est mort cette nuit !";
-        S.pending.push(info("Le village se réveille", texte, { dire: "C'est le matin, le village se réveille… sauf " + (morts.length ? listeFr(morts.map((m) => nom(m.id))) : "personne cette nuit") + ".", notes: notes.length ? "Pour le MJ : " + notes.join(" ") : "" }));
+        // Les morts en cascade (amoureux) sont annoncées avec celles de la nuit.
+        S.mortsGroupes = [];
         morts.forEach((m) => mourir(m.id, m.cause));
+        const tous = S.mortsGroupes;
+        S.mortsGroupes = null;
+        const texte = tous.length
+          ? "Annoncez : " + tous.map((m) => nom(m.id) + " (" + roleNom(P(m.id).role) + ", " + (CAUSES[m.cause] || m.cause) + (m.amoureuxDe !== null ? ", amoureux de " + nom(m.amoureuxDe) : "") + ")").join(" ; ") + "."
+          : "Personne n'est mort cette nuit !";
+        S.pending.unshift(info("Le village se réveille", texte, { dire: "C'est le matin, le village se réveille… sauf " + (tous.length ? listeFr(tous.map((m) => nom(m.id))) : "personne cette nuit") + ".", notes: notes.length ? "Pour le MJ : " + notes.join(" ") : "" }));
       },
     }),
 
@@ -832,6 +870,7 @@ const Engine = (() => {
     },
 
     successeur: (s) => {
+      if (partieGagnee()) return null;
       const fermiers = avecMetier("fermier");
       const cand = fermiers.length ? fermiers : vivants();
       if (cand.length === 0) return null;
@@ -866,6 +905,7 @@ const Engine = (() => {
     },
 
     bailli: (s) => {
+      if (partieGagnee()) return null;
       const b = avecMetier("bailli")[0];
       const vag = avecMetier("vagabond");
       if (!b || vag.length === 0) return null;
@@ -1004,7 +1044,79 @@ const Engine = (() => {
       if (idiot && S.mem.idiotRevele) notes.push("🤪 " + idiot.nom + " (Idiot révélé) ne vote plus.");
       if (avecMetier("institutrice").length) notes.push("📚 L'Institutrice (" + avecMetier("institutrice")[0].nom + ") peut interdire de vote jusqu'à 2 joueurs ayant un métier ; elle ne vote pas.");
       if (S.mem.boucInterdits) notes.push("🐐 Décision du Bouc Émissaire : " + S.mem.boucInterdits);
+      const tav = avecMetier("tavernier")[0];
+      if (tav && S.mem.tavernierImmun) notes.push("🍺 " + tav.nom + " (Tavernier) ne peut pas être envoyé au bûcher, tant qu'il n'a jamais voté contre un condamné.");
       const bouc = acteur("bouc-emissaire");
+      const instit = avecMetier("institutrice")[0];
+      const prives = S.mem.privesDeVote || [];
+      if (prives.some((id) => P(id) && P(id).alive)) notes.push("🚫 Ne votent pas : " + prives.filter((id) => P(id) && P(id).alive).map(nom).join(", ") + ".");
+      const votants = v.filter((x) => !(x.role === "idiot" && S.mem.idiotRevele) && x !== instit && !prives.includes(x.id));
+
+      const resoudre = (a, tavernierAVote) => {
+        S.mem.corbeau = null;
+        if (s.n === 1) S.mem.boucInterdits = null;
+        let c = null;
+        const suite = [];
+        if (a === "egalite") {
+          if (bouc) {
+            c = bouc.id;
+            suite.push({ t: "bouc", id: bouc.id });
+          } else log("Égalité au vote : personne n'est éliminé.");
+        } else if (a === "personne" || a === null) {
+          log("Le village n'élimine personne.");
+        } else c = a[0];
+        if (c !== null && a !== "egalite") {
+          if (avecMetier("chatelain").length && !S.mem.chatelainUtilise) suite.push({ t: "chatelain", id: c });
+          suite.push({ t: "execution", id: c });
+        }
+        if (c !== null && a !== "egalite" && tav && S.mem.tavernierImmun && tav.id !== c) {
+          if (tavernierAVote === undefined) suite.push({ t: "tavernier", id: c });
+          else if (tavernierAVote === c) {
+            S.mem.tavernierImmun = false;
+            log(tav.nom + " (Tavernier) a voté contre le condamné : il perd son immunité.");
+            suite.push(info("Le Tavernier perd son immunité", tav.nom + " a voté contre " + nom(c) + " : il pourra désormais être dévoré ou envoyé au bûcher.", { secret: true }));
+          }
+        }
+        const juge = acteur("juge-begue");
+        if (s.n === 1 && juge && !S.mem.jugeUtilise) suite.push({ t: "juge" });
+        S.queue.unshift(...suite);
+        S.mem.premierVoteFait = true;
+      };
+
+      if (S.config.votesDetailles) {
+        return {
+          titre: s.n === 2 ? "Second vote (Juge Bègue)" : "Vote du village",
+          dire: s.n === 2 ? "Le Juge a demandé un second vote : votez immédiatement, sans débat !" : "Le village débat puis vote. Qui sera envoyé au bûcher ?",
+          texte: notes.join(" "),
+          input: { kind: "votes", votants: ids(votants), candidats: ids(v) },
+          apply(votes) {
+            votes = votes || {};
+            const total = {};
+            const detail = [];
+            Object.entries(votes).forEach(([qui, cible]) => {
+              if (cible === null || cible === undefined || cible === "") return;
+              const poids = +qui === S.mem.capitaine ? 2 : 1;
+              total[cible] = (total[cible] || 0) + poids;
+              detail.push(nom(+qui) + " → " + nom(+cible) + (poids === 2 ? " (×2)" : ""));
+            });
+            if (S.mem.corbeau !== null && P(S.mem.corbeau).alive) total[S.mem.corbeau] = (total[S.mem.corbeau] || 0) + 2;
+            const classement = Object.entries(total).map(([id, n]) => [+id, n]).sort((x, y) => y[1] - x[1]);
+            let decision = "personne";
+            if (classement.length) {
+              const max = classement[0][1];
+              const premiers = classement.filter(([, n]) => n === max);
+              decision = premiers.length > 1 ? "egalite" : [premiers[0][0]];
+            }
+            log("Votes : " + (detail.join(", ") || "aucun") + ".");
+            const resultat = classement.map(([id, n]) => nom(id) + " : " + n + " voix").join(" ; ") || "aucune voix";
+            const conclusion = decision === "personne" ? "Personne n'est éliminé."
+              : decision === "egalite" ? "Égalité" + (bouc ? " : le Bouc Émissaire est sacrifié." : " : personne n'est éliminé.")
+              : nom(decision[0]) + " est désigné.";
+            resoudre(decision, tav ? (votes[tav.id] === undefined || votes[tav.id] === "" ? null : +votes[tav.id]) : undefined);
+            S.queue.unshift(info("Résultat du vote", resultat + ". " + conclusion, { notes: detail.length ? "Détail : " + detail.join(", ") + (S.mem.corbeau !== null ? "" : "") : "" }));
+          },
+        };
+      }
       return {
         titre: s.n === 2 ? "Second vote (Juge Bègue)" : "Vote du village",
         dire: s.n === 2 ? "Le Juge a demandé un second vote : votez immédiatement, sans débat !" : "Le village débat puis vote. Qui sera envoyé au bûcher ?",
@@ -1019,29 +1131,7 @@ const Engine = (() => {
             { v: "personne", label: "Personne n'est éliminé" },
           ],
         },
-        apply(a) {
-          S.mem.corbeau = null;
-          if (s.n === 1) S.mem.boucInterdits = null;
-          let c = null;
-          const suite = [];
-          if (a === "egalite") {
-            if (bouc) {
-              c = bouc.id;
-              suite.push({ t: "bouc", id: bouc.id });
-            } else log("Égalité au vote : personne n'est éliminé.");
-          } else if (a === "personne" || a === null) {
-            log("Le village n'élimine personne.");
-          } else c = a[0];
-          if (c !== null && a !== "egalite") {
-            if (avecMetier("chatelain").length && !S.mem.chatelainUtilise) suite.push({ t: "chatelain", id: c });
-            suite.push({ t: "execution", id: c });
-          }
-          if (c !== null && a !== "egalite" && avecMetier("tavernier").length && S.mem.tavernierImmun && P(c).metier !== "tavernier") suite.push({ t: "tavernier", id: c });
-          const juge = acteur("juge-begue");
-          if (s.n === 1 && juge && !S.mem.jugeUtilise) suite.push({ t: "juge" });
-          S.queue.unshift(...suite);
-          S.mem.premierVoteFait = true;
-        },
+        apply(a) { resoudre(a); },
       };
     },
 
@@ -1151,7 +1241,7 @@ const Engine = (() => {
     victoire: () => {
       const v = victoire();
       if (!v) return null;
-      const cle = v.camp + ":" + vivants().map((p) => p.id).join(",");
+      const cle = cleVictoire(v);
       if (S.mem.victoireIgnoree === cle) return null;
       return {
         titre: "🏆 Fin de partie ?",
@@ -1274,6 +1364,17 @@ const Engine = (() => {
     advance();
   }
 
+  // Jeton « peut voter / ne peut pas voter » posé par le meneur.
+  function basculerVote(id) {
+    snapshot();
+    const l = S.mem.privesDeVote || (S.mem.privesDeVote = []);
+    const i = l.indexOf(id);
+    if (i >= 0) l.splice(i, 1);
+    else l.push(id);
+    log(nom(id) + (i >= 0 ? " peut de nouveau voter." : " ne peut plus voter."));
+  }
+  const peutVoter = (id) => !(S.mem.privesDeVote || []).includes(id) && !(P(id).role === "idiot" && S.mem.idiotRevele);
+
   function noter(txt) {
     snapshot();
     log("📝 " + txt);
@@ -1288,6 +1389,8 @@ const Engine = (() => {
     annuler,
     intercaler,
     noter,
+    basculerVote,
+    peutVoter,
     phaseLabel: () => phaseLabel(),
     estLoup,
     voisins,
