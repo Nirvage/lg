@@ -19,6 +19,7 @@ function partie(roles, opts = {}) {
     voteConfiance: !!opts.voteConfiance,
     pesteNoire: !!opts.pesteNoire,
     voleurVole: !!opts.voleurVole,
+    mjCupidon: !!opts.mjCupidon,
     joueurs: roles.map((r, i) => ({ nom: "J" + i, role: r, metier: (opts.metiers || [])[i] || null })),
     horsJeu: opts.horsJeu || [],
   });
@@ -378,6 +379,19 @@ Object.assign(tests, {
     rep("voleur", [0]);
     assert.strictEqual(S().players[2].role, "voyante");
     assert.strictEqual(S().players[0].role, "voleur");
+  },
+  "MJ Cupidon : le meneur forme le couple"() {
+    partie(["loup-garou", "villageois", "villageois", "villageois", "villageois"], { mjCupidon: true });
+    rep("cupidon-mj", [2, 3]);
+    assert.strictEqual(etape(), "amoureux");
+    rep("loups", [2]);
+    jusqua("vote");
+    assert(!alive(2) && !alive(3));
+  },
+  "MJ Cupidon : sans effet si un Cupidon est en jeu"() {
+    partie(["loup-garou", "cupidon", "villageois", "villageois", "villageois"], { mjCupidon: true });
+    rep("cupidon", [3, 4]);
+    assert.strictEqual(etape(), "amoureux");
   },
   "Sans Comédien, pas d'appel fictif"() {
     partie(["loup-garou", "voleur", "villageois", "villageois", "villageois"], { horsJeu: ["salvateur", "villageois"] });

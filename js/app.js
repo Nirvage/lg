@@ -30,6 +30,7 @@
       voteConfiance: false,
       pesteNoire: false,
       voleurVole: false,
+      mjCupidon: false,
       distribution: [],
     },
     lire(CLE_CONFIG) || {}
@@ -228,6 +229,7 @@
         <label class="check"><input type="checkbox" data-opt="voteConfiance" ${config.voteConfiance ? "checked" : ""}> Proposer le vote de confiance (à chaque vote, vous choisissez : classique ou confiance)</label>
         <label class="check"><input type="checkbox" data-opt="pesteNoire" ${config.pesteNoire ? "checked" : ""}> Peste noire possible (la compo peut n'avoir aucun loup ; le village peut voter « la peste »)</label>
         <label class="check"><input type="checkbox" data-opt="voleurVole" ${config.voleurVole ? "checked" : ""}> Variante du Voleur : chaque nuit, le Voleur vole la carte d'un joueur, qui devient le Voleur à son tour (pas de cartes en plus)</label>
+        <label class="check"><input type="checkbox" data-opt="mjCupidon" ${config.mjCupidon ? "checked" : ""}> MJ Cupidon : le meneur choisit lui-même le couple d'amoureux la première nuit (s'il n'y a pas de Cupidon)</label>
         <div class="row" style="margin-top:8px">
           <button data-a="compo-rapide">⚡ Compo suggérée</button>
           <button class="ghost" data-a="compo-vide">Tout remettre à zéro</button>
@@ -658,6 +660,7 @@
       voteConfiance: config.voteConfiance,
       pesteNoire: config.pesteNoire,
       voleurVole: config.voleurVole,
+      mjCupidon: config.mjCupidon,
       joueurs: config.joueurs.map((n, i) => ({
         nom: n.trim() || "Joueur " + (i + 1),
         role: config.distribution[i].role,

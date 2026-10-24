@@ -32,6 +32,7 @@ const Engine = (() => {
         voteConfiance: !!setup.voteConfiance,
         pesteNoire: !!setup.pesteNoire,
         voleurVole: !!setup.voleurVole,
+        mjCupidon: !!setup.mjCupidon,
       },
       players,
       horsJeu: setup.horsJeu.slice(),
@@ -355,7 +356,7 @@ const Engine = (() => {
     // Variante du Voleur : le Voleur (ou le dernier volé) vole chaque nuit.
     if (!n1 && S.config.voleurVole) e.push({ t: "voleur" });
     if (n1) {
-      e.push({ t: "voleur" }, { t: "cupidon" }, { t: "amoureux" }, { t: "enfant" }, { t: "chienloup" },
+      e.push({ t: "voleur" }, { t: "cupidon" }, { t: "cupidon-mj" }, { t: "amoureux" }, { t: "enfant" }, { t: "chienloup" },
         { t: "sectaire" }, { t: "juge-signe" });
     }
     e.push({ t: "fratrie", role: "deux-soeurs" }, { t: "fratrie", role: "trois-freres" });
@@ -485,6 +486,21 @@ const Engine = (() => {
           log(noms(a) + " sont amoureux.", true);
         },
         dodo: "Cupidon, rendors-toi.",
+      };
+    },
+
+    // Option « MJ Cupidon » : sans Cupidon en jeu, le meneur forme le couple.
+    "cupidon-mj": () => {
+      if (!S.config.mjCupidon || S.mem.couple || acteur("cupidon")) return null;
+      return {
+        titre: "MJ Cupidon",
+        texte: "Choisissez vous-même les deux amoureux, sans réveiller personne. Ils seront réveillés ensuite pour se reconnaître.",
+        secret: true,
+        input: choixJoueurs(ids(vivants()), 2, 2),
+        apply(a) {
+          S.mem.couple = a;
+          log("Le meneur désigne " + noms(a) + " comme amoureux.", true);
+        },
       };
     },
 
