@@ -262,6 +262,23 @@
     `;
   }
 
+  // Résumé de la composition, regroupé par camp.
+  function resumeCompo(cartes, horsJeu) {
+    const parCamp = {};
+    cartes.forEach((id) => {
+      const r = ROLE_BY_ID[id];
+      (parCamp[r.camp] = parCamp[r.camp] || {})[id] = (parCamp[r.camp][id] || 0) + 1;
+    });
+    const lignes = Object.keys(CAMPS).filter((c) => parCamp[c]).map((c) => {
+      const roles = Object.entries(parCamp[c]);
+      const n = roles.reduce((t, [, k]) => t + k, 0);
+      return `<div class="resume-ligne"><span class="pastille camp-${c}">${esc(CAMPS[c].nom)} · ${n}</span>
+        <span>${roles.map(([id, k]) => esc(ROLE_BY_ID[id].nom) + (k > 1 ? " ×" + k : "")).join(", ")}</span></div>`;
+    });
+    if (horsJeu && horsJeu.length) lignes.push(`<div class="resume-ligne"><span class="pastille">Hors-jeu · ${horsJeu.length}</span><span>${horsJeu.map((id) => esc(ROLE_BY_ID[id].nom)).join(", ")}</span></div>`);
+    return `<div class="resume">${lignes.join("")}</div>`;
+  }
+
   function renderDistrib() {
     normaliserDistribution();
     const cartes = [...new Set(paquet())];
@@ -270,6 +287,11 @@
     const reste = cartesRestantes();
     app.innerHTML = `
       ${etapesSetup("distrib")}
+      <div class="panel">
+        <h2 style="margin-top:0">Composition</h2>
+        <p class="muted small">${nbJoueurs()} joueurs, ${paquet().length} cartes.</p>
+        ${resumeCompo(paquet())}
+      </div>
       <div class="panel">
         <h2 style="margin-top:0">Qui a quel rôle ?</h2>
         <p class="muted small">Distribuez les cartes physiques puis notez les rôles, ou laissez l'appli tirer au sort et montrez-les aux joueurs avec le téléphone.</p>
@@ -390,6 +412,7 @@
         <span class="phase ${nuit ? "nuit" : S.phase === "jour" ? "jour" : ""}">${esc(Engine.phaseLabel())}</span>
         <span class="muted grow">${vivants} vivant${vivants > 1 ? "s" : ""} / ${S.players.length}</span>
       </div>
+      ${S.phase === "fin" ? "" : chronoHtml()}
       ${corps}
       <details class="panel section" data-k="joueurs" ${ouvert("joueurs")}>
         <summary>Joueurs</summary>
@@ -405,6 +428,10 @@
         </div>
         <p class="muted small">Touchez 🗳️ / 🚫 pour indiquer qui peut voter (Bouc Émissaire, Institutrice…).</p>
         <p class="muted small">👑 Capitaine · ❤️ Amoureux · 🎶 Charmé · 🛡️ Protégé · 🐺 Devenu loup · 🐦‍⬛ Accusé par le Corbeau · 🛡️🍺 Tavernier immunisé</p>
+      </details>
+      <details class="panel section" data-k="compo" ${ouvert("compo")}>
+        <summary>Composition</summary>
+        <div style="margin-top:8px">${resumeCompo(S.players.map((p) => p.roleInitial), S.horsJeu)}</div>
       </details>
       <details class="panel section" data-k="outils" ${ouvert("outils")}>
         <summary>Outils du meneur</summary>
@@ -423,6 +450,75 @@
       </details>
     `;
   }
+
+  // ---------- Chronomètre (débats, votes…) ----------
+
+  const chrono = { duree: 0, debut: null, accumule: 0, sonne: false };
+  const ecoule = () => chrono.accumule + (chrono.debut ? Date.now() - chrono.debut : 0);
+  const format = (ms) => {
+    const t = Math.ceil(Math.abs(ms) / 1000);
+    return String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
+  };
+  function texteChrono() {
+    if (!chrono.duree) return format(ecoule());
+    const reste = chrono.duree - ecoule();
+    return reste > 0 ? format(reste) : "Temps écoulé !";
+  }
+  function chronoHtml() {
+    const fini = chrono.duree && ecoule() >= chrono.duree;
+    return `<div class="chrono panel">
+      <span id="chrono-val" class="chrono-val ${fini ? "fini" : ""}" aria-live="off">${texteChrono()}</span>
+      <div class="chrono-boutons">
+        ${[1, 2, 3, 5].map((m) => `<button class="small ${chrono.duree === m * 60000 ? "actif" : ""}" data-a="chrono" data-v="${m * 60}">${m} min</button>`).join("")}
+        <button class="small ${chrono.duree === 0 && (chrono.debut || chrono.accumule) ? "actif" : ""}" data-a="chrono" data-v="libre" title="Chronomètre sans limite">⏱️</button>
+        <button class="small" data-a="chrono" data-v="pause" aria-label="${chrono.debut ? "Pause" : "Démarrer"}">${chrono.debut ? "⏸" : "▶"}</button>
+        <button class="small" data-a="chrono" data-v="zero" aria-label="Remettre à zéro">↺</button>
+      </div>
+    </div>`;
+  }
+  function sonner() {
+    try { navigator.vibrate && navigator.vibrate([300, 150, 300]); } catch (e) { /* rien */ }
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.35, 0.7].forEach((t) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.frequency.value = 880;
+        g.gain.setValueAtTime(0.25, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.3);
+        o.connect(g).connect(ctx.destination);
+        o.start(ctx.currentTime + t);
+        o.stop(ctx.currentTime + t + 0.3);
+      });
+    } catch (e) { /* son indisponible */ }
+  }
+  function actionChrono(v) {
+    if (v === "pause") {
+      if (chrono.debut) { chrono.accumule = ecoule(); chrono.debut = null; }
+      else chrono.debut = Date.now();
+    } else if (v === "zero") {
+      chrono.accumule = 0;
+      chrono.debut = null;
+      chrono.sonne = false;
+    } else {
+      chrono.duree = v === "libre" ? 0 : +v * 1000;
+      chrono.accumule = 0;
+      chrono.debut = Date.now();
+      chrono.sonne = false;
+    }
+  }
+  setInterval(() => {
+    const el = document.getElementById("chrono-val");
+    if (!chrono.debut) return;
+    if (chrono.duree && ecoule() >= chrono.duree) {
+      chrono.accumule = chrono.duree;
+      chrono.debut = null;
+      if (!chrono.sonne) { chrono.sonne = true; sonner(); }
+      if (vue === "partie") render();
+      return;
+    }
+    if (el) el.textContent = texteChrono();
+  }, 250);
 
   function sauverPartie() {
     const S = Engine.etat();
@@ -642,6 +738,7 @@
         return;
       }
       case "passer": repondre(null); return;
+      case "chrono": actionChrono(b.dataset.v); break;
       case "jeton-vote":
         Engine.basculerVote(+b.dataset.id);
         sauverPartie();

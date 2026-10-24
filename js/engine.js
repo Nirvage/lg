@@ -496,12 +496,12 @@ const Engine = (() => {
     comedien: () => {
       const p = avecRole("comedien").find(pouvoirOK);
       if (!p) return null;
-      const dispo = [...new Set(S.horsJeu)].filter((r) => !S.mem.comedienUtilisees.includes(r) && ROLE_BY_ID[r] && ROLE_BY_ID[r].camp === "village" && r !== "villageois");
+      const dispo = [...new Set(S.horsJeu)].filter((r) => !S.mem.comedienUtilisees.includes(r) && ROLE_BY_ID[r] && ROLE_BY_ID[r].camp !== "loups" && !["villageois", "villageois-villageois", "comedien"].includes(r));
       if (dispo.length === 0) return null;
       return {
         titre: "Le Comédien",
         dire: reveil("Comédien") + " Choisis le personnage dont tu veux utiliser le pouvoir.",
-        texte: "Comédien : " + p.nom + ". Le pouvoir choisi sera appelé à son tour cette nuit, comme si le Comédien avait ce rôle. La carte est ensuite retirée.",
+        texte: "Comédien : " + p.nom + ". Cartes disponibles : celles mises de côté (hors-jeu). Le pouvoir choisi sera appelé à son tour cette nuit, comme si le Comédien avait ce rôle. La carte est ensuite retirée.",
         input: { kind: "choice", options: dispo.map((r) => ({ v: r, label: ROLE_BY_ID[r].icone + " " + roleNom(r) })) },
         skip: true,
         apply(a) {

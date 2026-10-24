@@ -247,3 +247,16 @@ details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .photo-actions .btn.small { min-height: 36px; padding: 4px 12px; font-size: 14px; cursor: pointer; }
 #compte.erreur { color: #ffb3b3; }
 .visuel.photo.ico img, .visuel.photo.mini img { aspect-ratio: 1; }
+
+/* Résumé de la composition */
+.resume { display: flex; flex-direction: column; gap: 8px; }
+.resume-ligne { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.resume-ligne .pastille { min-width: 120px; text-align: center; }
+
+/* Chronomètre */
+.chrono { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; }
+.chrono-val { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 96px; }
+.chrono-val.fini { color: var(--danger); font-size: 20px; }
+.chrono-boutons { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+.chrono-boutons button { min-width: 44px; }
+.chrono-boutons button.actif { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
