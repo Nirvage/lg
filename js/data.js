@@ -100,6 +100,12 @@ const ROLES = [
     effet: "Chaque nuit, il charme deux joueurs. Le meneur réveille ensuite tous les joueurs charmés pour qu'ils se reconnaissent. Il gagne seul si tous les joueurs encore en vie sont charmés.",
   },
   {
+    id: "fille-de-joie", nom: "Fille de Joie", ext: "nouvelle-lune", camp: "village", icone: "💋", max: 0, variante: true,
+    nuit: "Chaque nuit",
+    resume: "Variante (carte du Joueur de Flûte) : dort chaque nuit chez un habitant.",
+    effet: "Option de partie : elle remplace le Joueur de Flûte et utilise sa carte. Chaque nuit, elle choisit un habitant chez qui dormir, jamais le même deux nuits de suite. Si les loups attaquent la Fille de Joie, ils ne la trouvent pas : elle survit. Si les loups attaquent son client, elle meurt avec lui.",
+  },
+  {
     id: "salvateur", nom: "Salvateur", ext: "nouvelle-lune", camp: "village", icone: "🛡️", max: 1,
     nuit: "Chaque nuit",
     resume: "Protège un joueur des loups chaque nuit.",
@@ -279,7 +285,7 @@ const ROLE_BY_ID = Object.fromEntries(ROLES.map((r) => [r.id, r]));
 const METIER_BY_ID = Object.fromEntries(METIERS.map((m) => [m.id, m]));
 
 // Rôles qu'on peut mettre dans une composition (pas les statuts comme Capitaine).
-const ROLES_JOUABLES = ROLES.filter((r) => !r.statut);
+const ROLES_JOUABLES = ROLES.filter((r) => !r.statut && !r.variante);
 
 // Visuel d'une carte, par ordre de priorité :
 // 1. la photo de la carte prise dans l'appli (page Cartes), gardée dans ce navigateur ;
@@ -340,6 +346,9 @@ function visuelCarte(id, classe) {
   const r = ROLE_BY_ID[id];
   const icone = r ? r.icone : "?";
   if (PHOTOS[id]) return `<span class="visuel photo ${classe || ""}"><img src="${PHOTOS[id]}" alt="${r ? r.nom : ""}"></span>`;
+  // Une variante utilise le visuel de la carte qu'elle remplace.
+  if (r && r.variante && id === "fille-de-joie" && !IMAGES_ABSENTES.has(id) && IMAGES_CARTES.has("joueur-de-flute"))
+    return `<span class="visuel ${classe || ""}"><img src="img/cartes/joueur-de-flute.jpg" alt="" data-carte="${id}"><span class="repli">${icone}</span></span>`;
   if (IMAGES_ABSENTES.has(id) || !IMAGES_CARTES.has(id)) return `<span class="visuel sans-image ${classe || ""}"><span class="repli">${icone}</span></span>`;
   return `<span class="visuel ${classe || ""}"><img src="img/cartes/${id}.jpg" alt="" data-carte="${id}"><span class="repli">${icone}</span></span>`;
 }

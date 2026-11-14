@@ -35,6 +35,7 @@ function partie() {
     pesteNoire: Math.random() < 0.3,
     voleurVole: Math.random() < 0.5,
     mjCupidon: Math.random() < 0.5,
+    filleDeJoie: Math.random() < 0.5,
     joueurs: Array.from({ length: n }, (_, i) => ({ nom: "J" + i, role: cartes[i], metier: metiers.length ? metiers[i] || "vagabond" : null })),
     horsJeu: cartes.slice(n, n + 3),
   };

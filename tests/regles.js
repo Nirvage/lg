@@ -20,6 +20,7 @@ function partie(roles, opts = {}) {
     pesteNoire: !!opts.pesteNoire,
     voleurVole: !!opts.voleurVole,
     mjCupidon: !!opts.mjCupidon,
+    filleDeJoie: !!opts.filleDeJoie,
     joueurs: roles.map((r, i) => ({ nom: "J" + i, role: r, metier: (opts.metiers || [])[i] || null })),
     horsJeu: opts.horsJeu || [],
   });
@@ -407,6 +408,30 @@ Object.assign(tests, {
     assert(v.texte.includes("les loups gagnent"));
     Engine.repondre("fin");
     assert.strictEqual(S().winner.camp, "loups");
+  },
+  "Fille de Joie : attaquée chez elle, elle survit"() {
+    partie(["loup-garou", "joueur-de-flute", "villageois", "villageois", "villageois"], { filleDeJoie: true });
+    assert.strictEqual(S().players[1].role, "fille-de-joie");
+    rep("fille-de-joie", [2]);
+    rep("loups", [1]);
+    jusqua("vote");
+    assert(alive(1) && alive(2));
+  },
+  "Fille de Joie : son client est dévoré, elle meurt aussi"() {
+    partie(["loup-garou", "joueur-de-flute", "villageois", "villageois", "villageois", "villageois"], { filleDeJoie: true });
+    rep("fille-de-joie", [2]);
+    rep("loups", [2]);
+    jusqua("vote");
+    assert(!alive(2) && !alive(1));
+    assert.strictEqual(S().players[1].mort.cause, "client");
+  },
+  "Fille de Joie : pas deux nuits de suite chez le même habitant"() {
+    partie(["loup-garou", "joueur-de-flute", "villageois", "villageois", "villageois", "villageois", "villageois"], { filleDeJoie: true });
+    rep("fille-de-joie", [2]);
+    rep("loups", [6]);
+    jusqua("vote");
+    const sp = jusqua("fille-de-joie");
+    assert(!sp.input.candidats.includes(2) && sp.input.candidats.includes(3));
   },
   "Sans Comédien, pas d'appel fictif"() {
     partie(["loup-garou", "voleur", "villageois", "villageois", "villageois"], { horsJeu: ["salvateur", "villageois"] });

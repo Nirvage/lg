@@ -12,6 +12,11 @@ const Engine = (() => {
   // ---------- Création ----------
 
   function nouvellePartie(setup) {
+    // Option « Fille de Joie » : la carte du Joueur de Flûte change de rôle.
+    if (setup.filleDeJoie) {
+      const fdj = (r) => (r === "joueur-de-flute" ? "fille-de-joie" : r);
+      setup = { ...setup, joueurs: setup.joueurs.map((j) => ({ ...j, role: fdj(j.role) })), horsJeu: setup.horsJeu.map(fdj) };
+    }
     const players = setup.joueurs.map((j, i) => ({
       id: i,
       nom: j.nom,
@@ -33,6 +38,7 @@ const Engine = (() => {
         pesteNoire: !!setup.pesteNoire,
         voleurVole: !!setup.voleurVole,
         mjCupidon: !!setup.mjCupidon,
+        filleDeJoie: !!setup.filleDeJoie,
       },
       players,
       horsJeu: setup.horsJeu.slice(),
@@ -180,6 +186,7 @@ const Engine = (() => {
 
   const CAUSES = {
     loups: "dévoré par les loups",
+    client: "dévorée chez son client par les loups",
     sorciere: "empoisonné par la Sorcière",
     vote: "éliminé par le vote du village",
     chasseur: "abattu par le Chasseur",
@@ -328,7 +335,7 @@ const Engine = (() => {
   // Un villageois dont le rôle peut encore changer l'issue de la partie.
   function roleActif(p) {
     if (!pouvoirOK(p)) return false;
-    if (["villageois", "villageois-villageois", "cupidon", "voleur", "petite-fille", "servante"].includes(p.role)) return false;
+    if (["villageois", "villageois-villageois", "cupidon", "voleur", "petite-fille", "servante", "fille-de-joie"].includes(p.role)) return false;
     if (p.role === "sorciere" && !S.mem.potionVie && !S.mem.potionMort) return false;
     if (p.role === "idiot" && S.mem.idiotRevele) return false;
     if (p.role === "renard" && !S.mem.renardActif) return false;
@@ -360,7 +367,7 @@ const Engine = (() => {
         { t: "sectaire" }, { t: "juge-signe" });
     }
     e.push({ t: "fratrie", role: "deux-soeurs" }, { t: "fratrie", role: "trois-freres" });
-    e.push({ t: "salvateur" }, { t: "voyante" }, { t: "renard" }, { t: "gitane" });
+    e.push({ t: "salvateur" }, { t: "voyante" }, { t: "renard" }, { t: "gitane" }, { t: "fille-de-joie" });
     e.push({ t: "loups" }, { t: "infect" }, { t: "gml" }, { t: "loup-blanc" }, { t: "boulanger" });
     e.push({ t: "sorciere-vie" }, { t: "sorciere-mort" });
     e.push({ t: "flute" }, { t: "charmes" }, { t: "pyromane" }, { t: "corbeau" });
@@ -831,6 +838,25 @@ const Engine = (() => {
       };
     },
 
+    "fille-de-joie": () => {
+      const p = acteur("fille-de-joie");
+      if (!p) return null;
+      const cand = vivants().filter((x) => x.id !== p.id && x.id !== S.mem.filleDernier);
+      if (cand.length === 0) return null;
+      return {
+        titre: "La Fille de Joie",
+        dire: reveil("Fille de Joie") + " Désigne l'habitant chez qui tu passes la nuit.",
+        texte: "Fille de Joie : " + p.nom + "." + (S.mem.filleDernier != null && P(S.mem.filleDernier).alive ? " Elle ne peut pas retourner chez " + nom(S.mem.filleDernier) + " (la nuit dernière)." : "") + " Si les loups l'attaquent, elle n'est pas chez elle et survit ; s'ils attaquent son client, elle meurt avec lui.",
+        input: choixJoueurs(ids(cand)),
+        apply(a) {
+          S.night.client = a[0];
+          S.mem.filleDernier = a[0];
+          log(p.nom + " (Fille de Joie) dort chez " + nom(a[0]) + ".", true);
+        },
+        dodo: "Fille de Joie, rendors-toi.",
+      };
+    },
+
     flute: () => {
       const p = acteur("joueur-de-flute");
       if (!p) return null;
@@ -936,9 +962,20 @@ const Engine = (() => {
           if (p.metier === "tavernier" && S.mem.tavernierImmun) { notes.push("Le Tavernier (" + p.nom + ") ne peut pas être dévoré."); return; }
           ajouter(id, cause);
         };
-        attaque(N.victimeLoups, "loups");
-        attaque(N.victimeGml, "loups");
-        attaque(N.victimeBlanc, "loup-blanc");
+        // Fille de Joie : absente de chez elle, mais elle meurt si les loups attaquent son client.
+        const fille = N.client != null ? vivants().find((x) => x.role === "fille-de-joie" || (x.role === "comedien" && S.mem.comedienPouvoir === "fille-de-joie")) : null;
+        const attaqueLoups = (id, cause) => {
+          if (fille && id === fille.id) { notes.push("Les loups ont attaqué la Fille de Joie (" + fille.nom + "), mais elle dormait chez " + nom(N.client) + "."); return; }
+          const avant = morts.length;
+          attaque(id, cause);
+          if (fille && id === N.client && morts.length > avant) {
+            notes.push("La Fille de Joie (" + fille.nom + ") dormait chez la victime : elle meurt aussi.");
+            ajouter(fille.id, "client");
+          }
+        };
+        attaqueLoups(N.victimeLoups, "loups");
+        attaqueLoups(N.victimeGml, "loups");
+        attaqueLoups(N.victimeBlanc, "loup-blanc");
         if (N.poison !== null) ajouter(N.poison, "sorciere");
         if (N.chefMeute !== null) ajouter(N.chefMeute, "incendie");
         if (S.mem.chevalierNuit === S.nuit) {
@@ -1498,7 +1535,7 @@ const Engine = (() => {
     voleur: "voleur", cupidon: "cupidon", enfant: "enfant-sauvage", chienloup: "chien-loup",
     sectaire: "abominable-sectaire", "juge-signe": "juge-begue", salvateur: "salvateur",
     voyante: "voyante", renard: "renard", gitane: "gitane", "sorciere-vie": "sorciere",
-    flute: "joueur-de-flute", pyromane: "pyromane", corbeau: "corbeau",
+    flute: "joueur-de-flute", "fille-de-joie": "fille-de-joie", pyromane: "pyromane", corbeau: "corbeau",
   };
 
   // Avec un Comédien, les cartes mises de côté sont quand même appelées la

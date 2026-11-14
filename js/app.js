@@ -31,6 +31,7 @@
       pesteNoire: false,
       voleurVole: false,
       mjCupidon: false,
+      filleDeJoie: false,
       sansVillageois: false,
       distribution: [],
     },
@@ -235,6 +236,7 @@
         <label class="check"><input type="checkbox" data-opt="pesteNoire" ${config.pesteNoire ? "checked" : ""}> Peste noire possible (la compo peut n'avoir aucun loup ; le village peut voter « la peste »)</label>
         <label class="check"><input type="checkbox" data-opt="voleurVole" ${config.voleurVole ? "checked" : ""}> Variante du Voleur : chaque nuit, le Voleur vole la carte d'un joueur, qui devient le Voleur à son tour (pas de cartes en plus)</label>
         <label class="check"><input type="checkbox" data-opt="mjCupidon" ${config.mjCupidon ? "checked" : ""}> MJ Cupidon : le meneur choisit lui-même le couple d'amoureux la première nuit (s'il n'y a pas de Cupidon)</label>
+        <label class="check"><input type="checkbox" data-opt="filleDeJoie" ${config.filleDeJoie ? "checked" : ""}> Fille de Joie : la carte du Joueur de Flûte devient la Fille de Joie (elle dort chaque nuit chez un habitant)</label>
         <label class="check"><input type="checkbox" data-opt="sansVillageois" ${config.sansVillageois ? "checked" : ""}> Sans Simple Villageois : uniquement des rôles à pouvoir (la compo suggérée en tient compte)</label>
         <div class="row" style="margin-top:8px">
           <button data-a="compo-rapide">⚡ Compo suggérée</button>
@@ -640,7 +642,8 @@
   // QR code que les joueurs scannent pour voir la liste des rôles (sans les noms).
   function montrerQrCompo() {
     const S = vue === "partie" && Engine.etat();
-    const cartes = S ? S.players.map((p) => p.roleInitial).concat(S.horsJeuInitial || S.horsJeu) : paquet();
+    const cartes = S ? S.players.map((p) => p.roleInitial).concat(S.horsJeuInitial || S.horsJeu)
+      : paquet().map((r) => (config.filleDeJoie && r === "joueur-de-flute" ? "fille-de-joie" : r));
     const metiers = S ? S.players.map((p) => p.metier).filter(Boolean) : paquetMetiers();
     const lien = lienCompo(cartes, metiers);
     const fond = document.createElement("div");
@@ -668,6 +671,7 @@
       pesteNoire: config.pesteNoire,
       voleurVole: config.voleurVole,
       mjCupidon: config.mjCupidon,
+      filleDeJoie: config.filleDeJoie,
       joueurs: config.joueurs.map((n, i) => ({
         nom: n.trim() || "Joueur " + (i + 1),
         role: config.distribution[i].role,
